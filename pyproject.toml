@@ -1,0 +1,28 @@
+[project]
+name = "game-images"
+version = "0.1.0"
+description = "Create and edit game images using AI (extend/outpaint and manipulate/inpaint) with OpenAI and Fal.ai providers."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "openai>=1.0",
+    "fal-client>=0.4",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "python-multipart>=0.0.9",
+    "Pillow>=10.0",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio"]
+
+[project.scripts]
+game-images = "game_images.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/game_images"]

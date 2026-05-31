@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Game Images AI</title>
+  <style>
+    :root {
+      --bg: #1a1b26;
+      --surface: #24283b;
+      --text: #c0caf5;
+      --muted: #565f89;
+      --accent: #7aa2f7;
+      --border: #3b4261;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    h1 { font-size: 1.5rem; margin: 0; color: var(--accent); }
+    .headerSub { font-size: 0.8125rem; color: var(--muted); margin: 0.25rem 0 0 0; }
+    .headerSub a { color: var(--accent); }
+    #appHeader { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); }
+    .topBar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .topBarStatus { display: flex; align-items: center; gap: 0.5rem; color: var(--muted); font-size: 0.875rem; }
+    .topBarStatus .spinner { width: 18px; height: 18px; border-width: 2px; }
+    .topBarActions { display: flex; align-items: center; gap: 0.5rem; }
+    .topBarActions button { margin-top: 0; }
+    .topBarDownload { margin-top: 0; padding: 0.5rem 1rem; background: var(--accent); color: var(--bg); border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9375rem; }
+    .appBody { display: flex; flex: 1; overflow: hidden; }
+    .sidebar {
+      width: 200px;
+      min-width: 200px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 0.5rem 0;
+      transition: width 0.2s, min-width 0.2s;
+      overflow: hidden;
+    }
+    .sidebar.collapsed {
+      width: 48px;
+      min-width: 48px;
+    }
+    .sidebar.collapsed .sidebarItem span { display: none; }
+    .sidebar.collapsed .sidebarItem { padding: 0.5rem; justify-content: center; }
+    .sidebar.collapsed .sidebarItem::before { content: attr(data-first); }
+    .sidebar.collapsed .sidebarToggle { transform: rotate(180deg); }
+    .sidebarToggle {
+      width: 100%;
+      padding: 0.35rem;
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      cursor: pointer;
+      font-size: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+    .sidebarToggle:hover { color: var(--text); }
+    .sidebarNav { list-style: none; margin: 0; padding: 0; }
+    .sidebarNav li { margin: 0; }
+    .sidebarItem {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      padding: 0.5rem 1rem;
+      background: transparent;
+      color: var(--text);
+      border: none;
+      border-left: 3px solid transparent;
+      cursor: pointer;
+      font-size: 0.9375rem;
+      text-align: left;
+      margin-top: 0;
+    }
+    .sidebarItem:hover { background: rgba(122, 162, 247, 0.1); }
+    .sidebarItem.active { border-left-color: var(--accent); background: rgba(122, 162, 247, 0.08); }
+    .sidebarItem span { margin-left: 0.5rem; }
+    .mainContent {
+      flex: 1;
+      overflow: auto;
+      padding: 1rem 1.5rem;
+    }
+    .areaPane { display: none; }
+    .areaPane.active { display: block; }
+    .areaTitle { font-size: 1.1rem; margin: 0 0 0.75rem 0; color: var(--muted); }
+    section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      max-width: 640px;
+    }
+    label { display: block; margin-bottom: 0.25rem; color: var(--muted); font-size: 0.875rem; }
+    input[type="file"],
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.75rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    select { cursor: pointer; }
+    .row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+    .row label { margin-bottom: 0; }
+    .row input, .row select { width: auto; margin-bottom: 0; }
+    button {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+    button:hover { filter: brightness(1.1); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #resultImg { max-width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--border); margin-top: 0.5rem; }
+    .download { display: inline-block; margin-top: 0.5rem; color: var(--accent); }
+    .error { color: #f7768e; margin-top: 0.5rem; }
+
+    .mainLayout {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .mainLayout .formSection { flex: 1; min-width: 280px; max-width: 420px; }
+    .previewSection {
+      flex: 0 0 auto;
+      width: 320px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+    .previewSection h2 { font-size: 1rem; margin: 0 0 0.75rem 0; color: var(--muted); }
+    .previewPlaceholder {
+      color: var(--muted);
+      font-size: 0.875rem;
+      padding: 2rem 1rem;
+      text-align: center;
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+    }
+    .previewImageWrap {
+      max-width: 100%;
+      max-height: 320px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .previewImageWrap img {
+      max-width: 100%;
+      max-height: 320px;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      display: block;
+    }
+    .previewMeta {
+      margin-top: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .previewMeta dd { margin-left: 0; }
+    .previewMeta dt { font-weight: 600; color: var(--text); margin-top: 0.35rem; }
+    .previewMeta dt:first-child { margin-top: 0; }
+    .shiftSection { margin-bottom: 1rem; }
+    .helpText { font-size: 0.8125rem; color: var(--muted); margin: 0.25rem 0 0.5rem 0; line-height: 1.4; }
+    #applyShiftBtn { margin-top: 0; }
+    .apiWarning {
+      background: rgba(247, 118, 142, 0.15);
+      border: 1px solid #f7768e;
+      color: #f7768e;
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+    }
+    .apiWarning a { color: #7aa2f7; }
+
+    .maskEditorModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+    .maskEditorModal.visible { display: flex; }
+    .maskEditorPanel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      max-width: 95vw;
+      max-height: 95vh;
+      overflow: auto;
+    }
+    .maskEditorPanel h3 { margin: 0 0 0.75rem 0; font-size: 1.1rem; color: var(--accent); }
+    .maskEditorTools {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .maskEditorTools button {
+      margin-top: 0;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.875rem;
+    }
+    .maskEditorTools button.active { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .maskEditorCoords { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.75rem; }
+    .maskEditorCoords input[type="number"] { width: 4rem; margin-bottom: 0; }
+    .maskEditorWrap { position: relative; display: inline-block; margin-bottom: 0.75rem; }
+    .maskEditorWrap canvas { display: block; cursor: crosshair; }
+    .maskEditorOverlay { position: absolute; left: 0; top: 0; pointer-events: none; }
+    .maskEditorActions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    .maskEditorActions button.secondary { background: var(--border); color: var(--text); }
+    #maskStatus { font-size: 0.875rem; color: var(--muted); margin-top: 0.25rem; }
+    .libraryGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .libraryItem {
+      aspect-ratio: 1;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: pointer;
+      background: var(--bg);
+    }
+    .libraryItem:hover { border-color: var(--accent); }
+    .libraryItem.selected { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 2px; }
+    .libraryItem img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .libraryImportRow { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
+    .libraryImportRow input[type="file"] { width: auto; margin-bottom: 0; }
+    @media (max-width: 767px) {
+      .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 50; }
+      .sidebar.collapsed { width: 48px; }
+    }
+  </style>
+</head>
+<body class="appShell">
+  <div id="apiWarning" class="apiWarning" style="display: none;"></div>
+  <header id="appHeader">
+    <h1>Game Images AI</h1>
+    <p class="headerSub">Run <code>game-images serve</code> and open <a href="http://127.0.0.1:8000">http://127.0.0.1:8000</a></p>
+  </header>
+
+  <div id="topBar" class="topBar">
+    <div class="topBarStatus">
+      <span id="topBarStatusText">Select an image to start.</span>
+      <div id="topBarSpinner" class="spinner" aria-hidden="true" style="display: none;"></div>
+    </div>
+    <div class="topBarActions">
+      <button type="button" id="topBarRunBtn" disabled>Run</button>
+      <a id="topBarDownloadLink" class="download topBarDownload" download="result.png" style="display: none;">Download</a>
+    </div>
+  </div>
+
+  <div id="appBody" class="appBody">
+    <nav id="sidebar" class="sidebar">
+      <button type="button" id="sidebarToggle" class="sidebarToggle" aria-label="Collapse sidebar" title="Collapse sidebar">&#9664;</button>
+      <ul class="sidebarNav">
+        <li><button type="button" class="sidebarItem active" data-area="image" data-first="I" title="Image"><span>Image</span></button></li>
+        <li><button type="button" class="sidebarItem" data-area="create" data-first="C" title="Create"><span>Create</span></button></li>
+        <li><button type="button" class="sidebarItem" data-area="adjust" data-first="A" title="Adjust"><span>Adjust</span></button></li>
+        <li><button type="button" class="sidebarItem" data-area="tile" data-first="T" title="Tile"><span>Tile</span></button></li>
+        <li><button type="button" class="sidebarItem" data-area="maps" data-first="P" title="Maps"><span>Maps</span></button></li>
+        <li><button type="button" class="sidebarItem" data-area="extend" data-first="E" title="Extend"><span>Extend</span></button></li>
+        <li><button type="button" class="sidebarItem" data-area="manipulate" data-first="M" title="Manipulate"><span>Manipulate</span></button></li>
+        <li><button type="button" class="sidebarItem" data-area="result" data-first="R" title="Result"><span>Result</span></button></li>
+      </ul>
+    </nav>
+
+    <main id="mainContent" class="mainContent">
+      <div id="areaImage" class="areaPane active">
+        <div class="mainLayout">
+          <section class="formSection">
+            <label>Image library</label>
+            <div class="libraryImportRow">
+              <button type="button" id="libraryImportBtn">Import…</button>
+              <input type="file" name="libraryImport" id="libraryImportInput" accept="image/png,image/jpeg,image/webp" multiple style="display: none;" />
+            </div>
+            <div id="libraryGrid" class="libraryGrid"></div>
+            <p class="helpText">Select an image from the library or import new ones. Shifted images are not saved until you add them.</p>
+            <div class="shiftSection">
+              <label>Shift (optional)</label>
+              <p class="helpText">Move the image in a direction; the opposite side becomes black. Then use Extend to fill that area (e.g. Shift west → blank on right → Extend east).</p>
+              <div class="row">
+                <select name="shiftDirection" id="shiftDirection">
+                  <option value="west">West (blank on right)</option>
+                  <option value="east">East (blank on left)</option>
+                  <option value="north">North (blank at bottom)</option>
+                  <option value="south">South (blank at top)</option>
+                </select>
+                <input type="number" name="shiftAmount" id="shiftAmount" value="128" min="1" max="700" placeholder="px" style="width: 5rem;" />
+                <button type="button" id="applyShiftBtn">Apply shift</button>
+              </div>
+            </div>
+          </section>
+          <aside class="previewSection">
+            <h2>Preview</h2>
+            <div id="previewPlaceholder" class="previewPlaceholder">Select an image to preview</div>
+            <div id="previewContent" style="display: none;">
+              <div class="previewImageWrap">
+                <img id="previewImg" alt="Selected image" />
+              </div>
+              <dl class="previewMeta" id="previewMeta"></dl>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <div id="areaCreate" class="areaPane">
+        <section class="formSection">
+          <h2 class="areaTitle">Create (text-to-image)</h2>
+          <label>Prompt</label>
+          <input type="text" name="promptCreate" id="promptCreate" placeholder="e.g. Seamless dark asphalt road texture, top-down" required />
+          <div class="row">
+            <div>
+              <label>Width</label>
+              <input type="number" name="createWidth" id="createWidth" value="1024" min="64" max="2048" />
+            </div>
+            <div>
+              <label>Height</label>
+              <input type="number" name="createHeight" id="createHeight" value="1024" min="64" max="2048" />
+            </div>
+          </div>
+          <label>Provider</label>
+          <select name="providerCreate" id="providerCreate">
+            <option value="openai">OpenAI</option>
+            <option value="fal">Fal (Flux)</option>
+          </select>
+          <div id="modelRowCreate">
+            <label for="openaiModelCreate">Model (OpenAI)</label>
+            <select name="modelCreate" id="openaiModelCreate">
+              <option value="dall-e-3">DALL·E 3</option>
+              <option value="dall-e-2">DALL·E 2</option>
+            </select>
+          </div>
+          <p class="helpText">Result is added to the library. Use Adjust / Tile / Maps, then Manipulate for AI refinements.</p>
+        </section>
+        <p id="errorCreate" class="error" style="display: none;"></p>
+      </div>
+
+      <div id="areaAdjust" class="areaPane">
+        <section class="formSection">
+          <h2 class="areaTitle">Adjust</h2>
+          <p class="helpText">Traditional edits (no API key). Run replaces the working image.</p>
+          <label>Brightness <span id="brightnessVal">1.0</span></label>
+          <input type="range" id="adjustBrightness" min="0.2" max="2" step="0.05" value="1" />
+          <label>Contrast <span id="contrastVal">1.0</span></label>
+          <input type="range" id="adjustContrast" min="0.2" max="2" step="0.05" value="1" />
+          <label>Saturation <span id="saturationVal">1.0</span></label>
+          <input type="range" id="adjustSaturation" min="0" max="2" step="0.05" value="1" />
+          <label>Sharpness <span id="sharpnessVal">1.0</span></label>
+          <input type="range" id="adjustSharpness" min="0" max="3" step="0.1" value="1" />
+          <label>Blur radius <span id="blurVal">0</span></label>
+          <input type="range" id="adjustBlur" min="0" max="8" step="0.5" value="0" />
+          <label>Rotate (degrees)</label>
+          <input type="number" id="adjustRotate" value="0" step="90" />
+          <label>Flip</label>
+          <select id="adjustFlip">
+            <option value="none">None</option>
+            <option value="x">Mirror X</option>
+            <option value="y">Mirror Y</option>
+            <option value="xy">Both</option>
+          </select>
+        </section>
+        <p id="errorAdjust" class="error" style="display: none;"></p>
+      </div>
+
+      <div id="areaTile" class="areaPane">
+        <section class="formSection">
+          <h2 class="areaTitle">Tile / seamless</h2>
+          <label>Mode</label>
+          <select id="tileMode">
+            <option value="offset_x">Offset X (fix horizontal seam)</option>
+            <option value="offset_y">Offset Y (fix vertical seam)</option>
+            <option value="offset_xy">Offset X + Y</option>
+            <option value="mirror_x">Mirror X (2× wide preview)</option>
+            <option value="mirror_y">Mirror Y (2× tall preview)</option>
+            <option value="mirror_xy">Mirror XY (2×2 preview)</option>
+            <option value="preview_2x2">Repeat preview 2×2</option>
+          </select>
+          <p class="helpText">Offset swaps halves so seams move to the center; refine edges with Manipulate. Mirror modes help check tiling.</p>
+        </section>
+        <p id="errorTile" class="error" style="display: none;"></p>
+      </div>
+
+      <div id="areaMaps" class="areaPane">
+        <section class="formSection">
+          <h2 class="areaTitle">Texture maps</h2>
+          <label>Map type</label>
+          <select id="mapType">
+            <option value="bump">Bump / height-ish</option>
+            <option value="normal">Normal map</option>
+            <option value="roughness">Roughness</option>
+            <option value="ao">Ambient occlusion</option>
+            <option value="height">Height (grayscale)</option>
+          </select>
+          <label>Strength <span id="mapStrengthVal">1.0</span></label>
+          <input type="range" id="mapStrength" min="0.3" max="2.5" step="0.1" value="1" />
+          <p class="helpText">Procedural maps from luminance. Save each map to the library, then import into your game.</p>
+        </section>
+        <p id="errorMaps" class="error" style="display: none;"></p>
+      </div>
+
+      <div id="areaExtend" class="areaPane">
+        <section class="formSection">
+          <h2 class="areaTitle">Extend (outpaint)</h2>
+          <label>Direction(s)</label>
+          <select name="direction" id="direction">
+            <option value="north">North</option>
+            <option value="south">South</option>
+            <option value="east">East</option>
+            <option value="west">West</option>
+            <option value="north,south">North + South</option>
+            <option value="east,west">East + West</option>
+          </select>
+          <label>Amount (pixels)</label>
+          <input type="number" name="amount" id="amount" value="128" min="1" max="700" />
+          <label>Prompt</label>
+          <input type="text" name="prompt" id="prompt" placeholder="e.g. Seamless sky and trees" />
+          <label>Provider</label>
+          <select name="provider" id="provider">
+            <option value="openai">OpenAI</option>
+            <option value="fal">Fal (Gemini)</option>
+          </select>
+          <div id="modelRow">
+            <label for="openaiModel">Model (OpenAI)</label>
+            <select name="model" id="openaiModel">
+              <option value="dall-e-2">DALL·E 2</option>
+              <option value="gpt-image-1.5">GPT Image 1.5</option>
+              <option value="gpt-image-1">GPT Image 1</option>
+              <option value="gpt-image-1-mini">GPT Image 1 Mini</option>
+            </select>
+          </div>
+        </section>
+        <p id="errorExtend" class="error" style="display: none;"></p>
+      </div>
+
+      <div id="areaManipulate" class="areaPane">
+        <section class="formSection">
+          <h2 class="areaTitle">Manipulate (inpaint)</h2>
+          <label>Prompt</label>
+          <input type="text" name="promptManipulate" id="promptManipulate" placeholder="e.g. Add a red hat" required />
+          <label>Mask (optional)</label>
+          <p class="helpText">Transparent = where to apply changes; opaque = keep unchanged.</p>
+          <div class="row">
+            <button type="button" id="createMaskBtn">Create mask…</button>
+            <input type="file" name="mask" id="maskInput" accept="image/png" style="width: auto;" />
+          </div>
+          <div class="row" style="margin-top: 0.5rem;">
+            <label for="maskLibrarySelect" style="margin-bottom: 0;">From library:</label>
+            <select id="maskLibrarySelect" style="margin-bottom: 0; min-width: 12rem;">
+              <option value="">— None —</option>
+            </select>
+          </div>
+          <p id="maskStatus"></p>
+          <label>Provider</label>
+          <select name="providerManipulate" id="providerManipulate">
+            <option value="openai">OpenAI</option>
+            <option value="fal">Fal (Gemini)</option>
+          </select>
+          <div id="modelRowManipulate">
+            <label for="openaiModelManipulate">Model (OpenAI)</label>
+            <select name="modelManipulate" id="openaiModelManipulate">
+              <option value="dall-e-2">DALL·E 2</option>
+              <option value="gpt-image-1.5">GPT Image 1.5</option>
+              <option value="gpt-image-1">GPT Image 1</option>
+              <option value="gpt-image-1-mini">GPT Image 1 Mini</option>
+            </select>
+          </div>
+        </section>
+        <p id="errorManipulate" class="error" style="display: none;"></p>
+      </div>
+
+      <div id="areaResult" class="areaPane">
+        <section id="resultSection">
+          <h2 class="areaTitle">Result</h2>
+          <p id="resultLibraryFeedback" style="display: none; font-size: 0.875rem; color: var(--muted); margin-bottom: 0.5rem;">Added to library.</p>
+          <div id="resultPlaceholder" class="previewPlaceholder">Run an operation to see the result.</div>
+          <img id="resultImg" alt="Result" style="display: none;" />
+          <a id="downloadLink" class="download" download="result.png" style="display: none;">Download PNG</a>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div id="maskEditorModal" class="maskEditorModal" role="dialog" aria-labelledby="maskEditorTitle">
+    <div class="maskEditorPanel">
+      <h3 id="maskEditorTitle">Create mask</h3>
+      <p class="helpText">Mark the area you want to edit (will be transparent in the mask). Rest stays opaque.</p>
+      <div class="maskEditorTools">
+        <button type="button" id="maskToolRect" class="active">Rectangle</button>
+        <button type="button" id="maskToolCoords">Coordinates</button>
+        <button type="button" id="maskToolBrush">Brush</button>
+        <div id="maskBrushSizeWrap" style="display: none;">
+          <label for="maskBrushSize">Size</label>
+          <input type="range" id="maskBrushSize" min="4" max="80" value="24" style="width: 80px; margin: 0 0.5rem;" />
+          <span id="maskBrushSizeVal">24</span> px
+        </div>
+      </div>
+      <div id="maskCoordsWrap" class="maskEditorCoords" style="display: none;">
+        <input type="number" id="maskX" placeholder="X" min="0" title="Left" />
+        <input type="number" id="maskY" placeholder="Y" min="0" title="Top" />
+        <input type="number" id="maskW" placeholder="Width" min="1" title="Width" />
+        <input type="number" id="maskH" placeholder="Height" min="1" title="Height" />
+        <button type="button" id="maskCoordsApply">Apply area</button>
+      </div>
+      <div class="maskEditorWrap">
+        <canvas id="maskEditorCanvas"></canvas>
+        <canvas id="maskEditorOverlay" class="maskEditorOverlay"></canvas>
+      </div>
+      <div class="maskEditorActions">
+        <label style="display: flex; align-items: center; gap: 0.5rem; margin-right: 1rem;">
+          <input type="checkbox" id="maskSaveToLibrary" />
+          <span>Save to library</span>
+        </label>
+        <button type="button" id="maskClearBtn" class="secondary">Clear mask</button>
+        <button type="button" id="maskUseBtn">Use this mask</button>
+        <button type="button" id="maskCancelBtn" class="secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const libraryImportBtn = document.getElementById('libraryImportBtn');
+    const libraryImportInput = document.getElementById('libraryImportInput');
+    const libraryGrid = document.getElementById('libraryGrid');
+    const maskLibrarySelect = document.getElementById('maskLibrarySelect');
+    const previewPlaceholder = document.getElementById('previewPlaceholder');
+    const previewContent = document.getElementById('previewContent');
+    const previewImg = document.getElementById('previewImg');
+    const previewMeta = document.getElementById('previewMeta');
+    const applyShiftBtn = document.getElementById('applyShiftBtn');
+    const resultImg = document.getElementById('resultImg');
+    const downloadLink = document.getElementById('downloadLink');
+    const resultPlaceholder = document.getElementById('resultPlaceholder');
+    const topBarStatusText = document.getElementById('topBarStatusText');
+    const topBarSpinner = document.getElementById('topBarSpinner');
+    const topBarRunBtn = document.getElementById('topBarRunBtn');
+    const topBarDownloadLink = document.getElementById('topBarDownloadLink');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    let previewObjectUrl = null;
+    let workingImageBlob = null;
+    let maskBlob = null;
+    let selectedLibraryId = null;
+    let selectedMaskLibraryId = null;
+    let currentArea = 'image';
+    let lastResultUrl = null;
+
+    (async function checkApi() {
+      try {
+        const r = await fetch(window.location.origin + '/health');
+        if (!r.ok) throw new Error(r.status);
+      } catch (e) {
+        const el = document.getElementById('apiWarning');
+        el.style.display = 'block';
+        el.innerHTML = 'API not found (404). Use this app from the correct server: open <a href="http://127.0.0.1:8000">http://127.0.0.1:8000</a> after running <code>game-images serve</code> in the project. You are currently at: ' + window.location.origin;
+      }
+    })();
+
+    function formatBytes(n) {
+      if (n < 1024) return n + ' B';
+      if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+      return (n / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    function showPreviewFromFile(file) {
+      if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+      previewObjectUrl = null;
+      if (!file || !file.type.startsWith('image/')) {
+        previewPlaceholder.style.display = 'block';
+        previewContent.style.display = 'none';
+        previewPlaceholder.textContent = 'Select an image to preview';
+        return;
+      }
+      previewObjectUrl = URL.createObjectURL(file);
+      previewImg.src = previewObjectUrl;
+      previewPlaceholder.style.display = 'none';
+      previewContent.style.display = 'block';
+      previewMeta.innerHTML = '';
+      const sizeStr = formatBytes(file.size);
+      const typeStr = file.type || 'image';
+      const nameStr = file.name || 'image';
+      addMetaRow('File', nameStr);
+      addMetaRow('Size', sizeStr);
+      addMetaRow('Type', typeStr);
+      addMetaRow('Dimensions', '…');
+      previewImg.onload = function() {
+        const w = previewImg.naturalWidth;
+        const h = previewImg.naturalHeight;
+        const dimsEl = previewMeta.querySelector('[data-dim]');
+        if (dimsEl) dimsEl.textContent = w + ' × ' + h + ' px';
+      };
+    }
+
+    function showPreviewFromBlob(blob, label) {
+      if (previewObjectUrl) {
+        URL.revokeObjectURL(previewObjectUrl);
+        previewObjectUrl = null;
+      }
+      previewPlaceholder.style.display = 'none';
+      previewContent.style.display = 'block';
+      previewMeta.innerHTML = '';
+      addMetaRow('Source', label || 'Shifted image');
+      addMetaRow('Size', formatBytes(blob.size));
+      addMetaRow('Type', blob.type || 'image/png');
+      addMetaRow('Dimensions', '…');
+      previewImg.onload = function() {
+        const w = previewImg.naturalWidth;
+        const h = previewImg.naturalHeight;
+        const dimsEl = previewMeta.querySelector('[data-dim]');
+        if (dimsEl) dimsEl.textContent = w + ' × ' + h + ' px';
+      };
+      previewImg.removeAttribute('src');
+      previewObjectUrl = URL.createObjectURL(blob);
+      previewImg.src = previewObjectUrl;
+      previewContent.offsetHeight;
+    }
+
+    function showPreview(file) {
+      showPreviewFromFile(file);
+    }
+
+    function addMetaRow(label, value) {
+      const dt = document.createElement('dt');
+      dt.textContent = label;
+      const dd = document.createElement('dd');
+      dd.textContent = value;
+      if (label === 'Dimensions') dd.setAttribute('data-dim', '');
+      previewMeta.appendChild(dt);
+      previewMeta.appendChild(dd);
+    }
+
+    async function refreshLibraryGrid() {
+      try {
+        const r = await fetch('/library?type=image,result');
+        if (!r.ok) return;
+        const items = await r.json();
+        libraryGrid.innerHTML = '';
+        items.forEach(function(item) {
+          const div = document.createElement('div');
+          div.className = 'libraryItem' + (item.id === selectedLibraryId ? ' selected' : '');
+          div.dataset.id = item.id;
+          div.title = item.filename || item.id;
+          const img = document.createElement('img');
+          img.src = '/library/' + item.id;
+          img.alt = item.filename || '';
+          img.loading = 'lazy';
+          div.appendChild(img);
+          div.addEventListener('click', function() { selectFromLibrary(item.id); });
+          libraryGrid.appendChild(div);
+        });
+      } catch (e) { /* ignore */ }
+    }
+    async function refreshMaskLibrarySelect() {
+      try {
+        const r = await fetch('/library?type=mask');
+        if (!r.ok) return;
+        const items = await r.json();
+        const sel = maskLibrarySelect;
+        const current = sel.value;
+        sel.innerHTML = '<option value="">— None —</option>';
+        items.forEach(function(item) {
+          const opt = document.createElement('option');
+          opt.value = item.id;
+          opt.textContent = item.filename || item.id.slice(0, 8);
+          sel.appendChild(opt);
+        });
+        if (current && items.some(function(i) { return i.id === current; })) sel.value = current;
+        else if (selectedMaskLibraryId) sel.value = selectedMaskLibraryId;
+      } catch (e) { /* ignore */ }
+    }
+    async function selectFromLibrary(id) {
+      try {
+        const r = await fetch('/library/' + id);
+        if (!r.ok) throw new Error('Failed to load image');
+        const blob = await r.blob();
+        workingImageBlob = blob;
+        selectedLibraryId = id;
+        maskBlob = null;
+        selectedMaskLibraryId = null;
+        document.getElementById('maskStatus').textContent = '';
+        maskLibrarySelect.value = '';
+        showPreviewFromBlob(blob, 'From library');
+        refreshLibraryGrid();
+        updateRunButton();
+        setStatus('Ready', false);
+      } catch (err) {
+        setStatus(err.message, false);
+      }
+    }
+    const errorElByArea = {
+      create: 'errorCreate',
+      adjust: 'errorAdjust',
+      tile: 'errorTile',
+      maps: 'errorMaps',
+      extend: 'errorExtend',
+      manipulate: 'errorManipulate',
+    };
+    function getErrorEl() {
+      const id = errorElByArea[currentArea] || 'errorExtend';
+      return document.getElementById(id);
+    }
+    const runnableAreas = ['create', 'adjust', 'tile', 'maps', 'extend', 'manipulate'];
+    function setStatus(text, showSpinner) {
+      topBarStatusText.textContent = text;
+      topBarSpinner.style.display = showSpinner ? 'block' : 'none';
+    }
+    let isRequestInProgress = false;
+    function updateRunButton() {
+      if (!runnableAreas.includes(currentArea) || isRequestInProgress) {
+        topBarRunBtn.disabled = true;
+        return;
+      }
+      if (currentArea === 'create') {
+        const p = document.getElementById('promptCreate').value.trim();
+        topBarRunBtn.disabled = !p;
+        return;
+      }
+      topBarRunBtn.disabled = !workingImageBlob;
+    }
+    function switchArea(area) {
+      currentArea = area;
+      document.querySelectorAll('.areaPane').forEach(function(p) { p.classList.remove('active'); });
+      document.getElementById('area' + area.charAt(0).toUpperCase() + area.slice(1)).classList.add('active');
+      document.querySelectorAll('.sidebarItem').forEach(function(b) { b.classList.toggle('active', b.dataset.area === area); });
+      topBarDownloadLink.style.display = lastResultUrl ? 'inline-block' : 'none';
+      updateRunButton();
+      if (area === 'image') setStatus(workingImageBlob ? 'Ready' : 'Select an image to start.', false);
+      else if (area === 'result') setStatus(lastResultUrl ? 'Result ready' : 'Run an operation to see the result.', false);
+      else if (area === 'create') setStatus('Enter a prompt and Run to generate a new image.', false);
+      else if (area === 'adjust' || area === 'tile' || area === 'maps') setStatus(workingImageBlob ? 'Ready' : 'Select an image first.', false);
+    }
+    document.querySelectorAll('.sidebarItem').forEach(function(btn) {
+      btn.addEventListener('click', function() { switchArea(this.dataset.area); });
+    });
+    if (localStorage.getItem('sidebarCollapsed') === '1') sidebar.classList.add('collapsed');
+    sidebarToggle.addEventListener('click', function() {
+      sidebar.classList.toggle('collapsed');
+      localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed') ? '1' : '0');
+      sidebarToggle.setAttribute('aria-label', sidebar.classList.contains('collapsed') ? 'Expand sidebar' : 'Collapse sidebar');
+    });
+
+    libraryImportBtn.addEventListener('click', function() { libraryImportInput.click(); });
+    libraryImportInput.addEventListener('change', async function() {
+      const files = this.files;
+      if (!files || files.length === 0) return;
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        if (!f.type.startsWith('image/')) continue;
+        const formData = new FormData();
+        formData.append('image', f, f.name || 'image.png');
+        formData.append('type', 'image');
+        try {
+          const r = await fetch('/library/import', { method: 'POST', body: formData });
+          if (!r.ok) throw new Error('Import failed');
+        } catch (err) {
+          setStatus(err.message, false);
+          break;
+        }
+      }
+      this.value = '';
+      refreshLibraryGrid();
+      setStatus('Import complete. Select an image from the library.', false);
+    });
+
+    applyShiftBtn.addEventListener('click', async function() {
+      if (!workingImageBlob) {
+        setStatus('Select an image first.', false);
+        return;
+      }
+      applyShiftBtn.disabled = true;
+      const formData = new FormData();
+      formData.append('image', workingImageBlob, 'image.png');
+      formData.append('direction', document.getElementById('shiftDirection').value);
+      formData.append('amount', document.getElementById('shiftAmount').value);
+      try {
+        const res = await fetch('/shift', { method: 'POST', body: formData });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: res.statusText }));
+          throw new Error(err.detail || res.statusText);
+        }
+        const blob = await res.blob();
+        if (blob.size === 0) {
+          throw new Error('Server returned an empty image.');
+        }
+        workingImageBlob = blob;
+        selectedLibraryId = null;
+        maskBlob = null;
+        document.getElementById('maskStatus').textContent = '';
+        showPreviewFromBlob(blob, 'Shifted image');
+        setStatus('Ready', false);
+        updateRunButton();
+      } catch (err) {
+        setStatus(err.message, false);
+      }
+      applyShiftBtn.disabled = false;
+    });
+
+    document.getElementById('provider').addEventListener('change', function() {
+      document.getElementById('modelRow').style.display = this.value === 'openai' ? 'block' : 'none';
+    });
+    document.getElementById('providerManipulate').addEventListener('change', function() {
+      document.getElementById('modelRowManipulate').style.display = this.value === 'openai' ? 'block' : 'none';
+    });
+    document.getElementById('modelRow').style.display = document.getElementById('provider').value === 'openai' ? 'block' : 'none';
+    document.getElementById('modelRowManipulate').style.display = document.getElementById('providerManipulate').value === 'openai' ? 'block' : 'none';
+
+    (function initMaskEditor() {
+      const modal = document.getElementById('maskEditorModal');
+      const canvas = document.getElementById('maskEditorCanvas');
+      const overlay = document.getElementById('maskEditorOverlay');
+      const btnRect = document.getElementById('maskToolRect');
+      const btnCoords = document.getElementById('maskToolCoords');
+      const btnBrush = document.getElementById('maskToolBrush');
+      const brushSizeWrap = document.getElementById('maskBrushSizeWrap');
+      const brushSizeInput = document.getElementById('maskBrushSize');
+      const brushSizeVal = document.getElementById('maskBrushSizeVal');
+      const coordsWrap = document.getElementById('maskCoordsWrap');
+      const maskX = document.getElementById('maskX');
+      const maskY = document.getElementById('maskY');
+      const maskW = document.getElementById('maskW');
+      const maskH = document.getElementById('maskH');
+      const btnCoordsApply = document.getElementById('maskCoordsApply');
+      const btnClear = document.getElementById('maskClearBtn');
+      const btnUse = document.getElementById('maskUseBtn');
+      const btnCancel = document.getElementById('maskCancelBtn');
+      const maskInput = document.getElementById('maskInput');
+      const maskStatus = document.getElementById('maskStatus');
+
+      const MAX_DISPLAY = 480;
+      let imgW = 0, imgH = 0, scale = 1;
+      let maskCtx = null;
+      let maskCanvasOff = null;
+      let tool = 'rect';
+      let rectStart = null;
+      let brushPoints = [];
+      let editRects = [];
+      let sourceImg = null;
+
+      function displayToImage(clientX, clientY) {
+        const r = canvas.getBoundingClientRect();
+        const dx = (clientX - r.left) * (canvas.width / r.width);
+        const dy = (clientY - r.top) * (canvas.height / r.height);
+        return [ Math.round(dx / scale), Math.round(dy / scale) ];
+      }
+
+      function drawImageOnCanvas() {
+        const ctx = canvas.getContext('2d');
+        canvas.width = Math.min(sourceImg.width, MAX_DISPLAY);
+        canvas.height = Math.min(sourceImg.height, MAX_DISPLAY);
+        scale = canvas.width / sourceImg.width;
+        if (sourceImg.width > MAX_DISPLAY || sourceImg.height > MAX_DISPLAY) {
+          const s = MAX_DISPLAY / Math.max(sourceImg.width, sourceImg.height);
+          canvas.width = Math.round(sourceImg.width * s);
+          canvas.height = Math.round(sourceImg.height * s);
+          scale = canvas.width / sourceImg.width;
+        }
+        imgW = sourceImg.width;
+        imgH = sourceImg.height;
+        ctx.drawImage(sourceImg, 0, 0, canvas.width, canvas.height);
+        overlay.width = canvas.width;
+        overlay.height = canvas.height;
+        maskCanvasOff = document.createElement('canvas');
+        maskCanvasOff.width = imgW;
+        maskCanvasOff.height = imgH;
+        maskCtx = maskCanvasOff.getContext('2d');
+        maskCtx.fillStyle = 'black';
+        maskCtx.fillRect(0, 0, imgW, imgH);
+        redrawOverlay();
+      }
+
+      function redrawOverlay() {
+        const ctx = overlay.getContext('2d');
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        ctx.fillStyle = 'rgba(122, 162, 247, 0.4)';
+        const ix = (x) => Math.round(x * scale);
+        const iw = (w) => Math.max(1, Math.round(w * scale));
+        editRects.forEach(function(r) {
+          ctx.fillRect(ix(r.x), ix(r.y), iw(r.w), iw(r.h));
+        });
+        brushPoints.forEach(function(stroke) {
+          const rad = Math.max(1, Math.round(stroke.radius * scale));
+          stroke.points.forEach(function(p) {
+            ctx.beginPath();
+            ctx.arc(ix(p.x), ix(p.y), rad, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        });
+      }
+
+      function applyRectToMask(ix, iy, iw, ih) {
+        const x = Math.max(0, Math.min(ix, imgW - 1));
+        const y = Math.max(0, Math.min(iy, imgH - 1));
+        const w = Math.max(1, Math.min(iw, imgW - x));
+        const h = Math.max(1, Math.min(ih, imgH - y));
+        maskCtx.clearRect(x, y, w, h);
+        editRects.push({ x, y, w, h });
+        redrawOverlay();
+      }
+
+      function applyBrushToMask(ix, iy, radius) {
+        const r = Math.max(2, Math.min(radius, Math.min(imgW, imgH) / 2));
+        maskCtx.clearRect(ix - r, iy - r, r * 2, r * 2);
+        if (!brushPoints.length || brushPoints[brushPoints.length - 1].radius !== r) {
+          brushPoints.push({ points: [], radius: r });
+        }
+        brushPoints[brushPoints.length - 1].points.push({ x: ix, y: iy });
+        redrawOverlay();
+      }
+
+      function openEditor() {
+        const src = workingImageBlob;
+        const errEl = getErrorEl();
+        if (!src) {
+          errEl.textContent = 'Select an image first.';
+          errEl.style.display = 'block';
+          return;
+        }
+        errEl.style.display = 'none';
+        editRects = [];
+        brushPoints = [];
+        const url = URL.createObjectURL(src);
+        sourceImg = new Image();
+        sourceImg.onload = function() {
+          URL.revokeObjectURL(url);
+          drawImageOnCanvas();
+          modal.classList.add('visible');
+        };
+        sourceImg.onerror = function() {
+          URL.revokeObjectURL(url);
+          getErrorEl().textContent = 'Could not load image for mask editor.';
+          getErrorEl().style.display = 'block';
+        };
+        sourceImg.src = url;
+      }
+
+      function closeEditor() {
+        modal.classList.remove('visible');
+      }
+
+      async function useMask() {
+        const dataUrl = maskCanvasOff.toDataURL('image/png');
+        const blob = await fetch(dataUrl).then(r => r.blob());
+        maskBlob = blob;
+        selectedMaskLibraryId = null;
+        maskInput.value = '';
+        maskLibrarySelect.value = '';
+        maskStatus.textContent = 'Mask set (created in UI).';
+        if (document.getElementById('maskSaveToLibrary').checked) {
+          const formData = new FormData();
+          formData.append('image', blob, 'mask.png');
+          formData.append('type', 'mask');
+          try {
+            const r = await fetch('/library/import', { method: 'POST', body: formData });
+            if (r.ok) {
+              const data = await r.json();
+              selectedMaskLibraryId = data.id;
+              maskStatus.textContent = 'Mask set and saved to library.';
+              refreshMaskLibrarySelect();
+            }
+          } catch (e) { /* ignore */ }
+        }
+        closeEditor();
+      }
+
+      canvas.addEventListener('mousedown', function(e) {
+        if (tool === 'rect') {
+          const [ix, iy] = displayToImage(e.clientX, e.clientY);
+          rectStart = { x: ix, y: iy };
+        } else if (tool === 'brush') {
+          const [ix, iy] = displayToImage(e.clientX, e.clientY);
+          const r = parseInt(brushSizeInput.value, 10);
+          applyBrushToMask(ix, iy, r);
+        }
+      });
+      canvas.addEventListener('mousemove', function(e) {
+        if (tool === 'rect' && rectStart) {
+          const [ix, iy] = displayToImage(e.clientX, e.clientY);
+          const x = Math.min(rectStart.x, ix);
+          const y = Math.min(rectStart.y, iy);
+          const w = Math.abs(ix - rectStart.x);
+          const h = Math.abs(iy - rectStart.y);
+          redrawOverlay();
+          const ox = document.getElementById('maskEditorOverlay').getContext('2d');
+          ox.fillStyle = 'rgba(122, 162, 247, 0.5)';
+          ox.fillRect(Math.round(x * scale), Math.round(y * scale), Math.max(1, Math.round(w * scale)), Math.max(1, Math.round(h * scale)));
+        }
+      });
+      canvas.addEventListener('mouseup', function(e) {
+        if (tool === 'rect' && rectStart) {
+          const [ix, iy] = displayToImage(e.clientX, e.clientY);
+          const x = Math.min(rectStart.x, ix);
+          const y = Math.min(rectStart.y, iy);
+          const w = Math.max(1, Math.abs(ix - rectStart.x));
+          const h = Math.max(1, Math.abs(iy - rectStart.y));
+          applyRectToMask(x, y, w, h);
+          rectStart = null;
+        }
+      });
+      canvas.addEventListener('mouseleave', function() { rectStart = null; });
+
+      btnRect.addEventListener('click', function() { tool = 'rect'; btnRect.classList.add('active'); btnCoords.classList.remove('active'); btnBrush.classList.remove('active'); brushSizeWrap.style.display = 'none'; coordsWrap.style.display = 'none'; });
+      btnCoords.addEventListener('click', function() { tool = 'coords'; btnCoords.classList.add('active'); btnRect.classList.remove('active'); btnBrush.classList.remove('active'); brushSizeWrap.style.display = 'none'; coordsWrap.style.display = 'flex'; if (imgW) { maskX.value = 0; maskY.value = 0; maskW.value = imgW; maskH.value = imgH; } });
+      btnBrush.addEventListener('click', function() { tool = 'brush'; btnBrush.classList.add('active'); btnRect.classList.remove('active'); btnCoords.classList.remove('active'); brushSizeWrap.style.display = 'block'; coordsWrap.style.display = 'none'; });
+
+      brushSizeInput.addEventListener('input', function() { brushSizeVal.textContent = this.value; });
+
+      btnCoordsApply.addEventListener('click', function() {
+        const x = parseInt(maskX.value, 10) || 0;
+        const y = parseInt(maskY.value, 10) || 0;
+        const w = parseInt(maskW.value, 10) || imgW;
+        const h = parseInt(maskH.value, 10) || imgH;
+        applyRectToMask(x, y, w, h);
+      });
+
+      btnClear.addEventListener('click', function() {
+        maskCtx.fillStyle = 'black';
+        maskCtx.fillRect(0, 0, imgW, imgH);
+        editRects = [];
+        brushPoints = [];
+        redrawOverlay();
+      });
+
+      btnUse.addEventListener('click', useMask);
+      btnCancel.addEventListener('click', closeEditor);
+
+      maskLibrarySelect.addEventListener('change', async function() {
+        const id = this.value;
+        if (!id) { maskBlob = null; selectedMaskLibraryId = null; maskStatus.textContent = ''; return; }
+        try {
+          const r = await fetch('/library/' + id);
+          if (!r.ok) throw new Error('Failed to load mask');
+          maskBlob = await r.blob();
+          selectedMaskLibraryId = id;
+          maskInput.value = '';
+          maskStatus.textContent = 'Mask: from library.';
+        } catch (err) { maskStatus.textContent = 'Error: ' + err.message; }
+      });
+      document.getElementById('createMaskBtn').addEventListener('click', openEditor);
+      maskInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+          maskBlob = this.files[0];
+          selectedMaskLibraryId = null;
+          maskLibrarySelect.value = '';
+          maskStatus.textContent = 'Mask: uploaded file.';
+        } else {
+          maskBlob = null;
+          maskStatus.textContent = '';
+        }
+      });
+    })();
+
+    async function finishWithResult(blob, promptForLibrary) {
+      const sourceId = selectedLibraryId;
+      const maskId = selectedMaskLibraryId;
+      if (lastResultUrl) URL.revokeObjectURL(lastResultUrl);
+      lastResultUrl = URL.createObjectURL(blob);
+      resultImg.src = lastResultUrl;
+      resultImg.style.display = 'block';
+      downloadLink.href = lastResultUrl;
+      downloadLink.style.display = 'inline-block';
+      resultPlaceholder.style.display = 'none';
+      topBarDownloadLink.href = lastResultUrl;
+      topBarDownloadLink.style.display = 'inline-block';
+      workingImageBlob = blob;
+      selectedLibraryId = null;
+      showPreviewFromBlob(blob, 'Working image');
+      setStatus('Result ready', false);
+      switchArea('result');
+      document.getElementById('resultLibraryFeedback').style.display = 'none';
+      try {
+        const saveForm = new FormData();
+        saveForm.append('image', blob, 'result.png');
+        saveForm.append('prompt', promptForLibrary || '');
+        if (sourceId) saveForm.append('source_id', sourceId);
+        if (maskId) saveForm.append('mask_id', maskId);
+        const saveRes = await fetch('/library/from-result', { method: 'POST', body: saveForm });
+        if (saveRes.ok) {
+          document.getElementById('resultLibraryFeedback').style.display = 'block';
+          refreshLibraryGrid();
+        }
+      } catch (e) { /* ignore */ }
+      updateRunButton();
+    }
+
+    async function runOperation() {
+      const errEl = getErrorEl();
+      errEl.style.display = 'none';
+      isRequestInProgress = true;
+      updateRunButton();
+      setStatus('Working…', true);
+
+      const formData = new FormData();
+      let endpoint = '';
+      let promptForLibrary = '';
+
+      try {
+        if (currentArea === 'create') {
+          promptForLibrary = document.getElementById('promptCreate').value.trim();
+          if (!promptForLibrary) throw new Error('Prompt is required.');
+          endpoint = '/create';
+          formData.append('prompt', promptForLibrary);
+          formData.append('width', document.getElementById('createWidth').value);
+          formData.append('height', document.getElementById('createHeight').value);
+          formData.append('provider', document.getElementById('providerCreate').value);
+          if (document.getElementById('providerCreate').value === 'openai') {
+            formData.append('model', document.getElementById('openaiModelCreate').value);
+          }
+        } else if (!workingImageBlob) {
+          throw new Error('Select an image or apply a shift first.');
+        } else if (currentArea === 'adjust') {
+          endpoint = '/adjust';
+          formData.append('image', workingImageBlob, 'image.png');
+          formData.append('brightness', document.getElementById('adjustBrightness').value);
+          formData.append('contrast', document.getElementById('adjustContrast').value);
+          formData.append('saturation', document.getElementById('adjustSaturation').value);
+          formData.append('sharpness', document.getElementById('adjustSharpness').value);
+          formData.append('blur_radius', document.getElementById('adjustBlur').value);
+          formData.append('rotate_degrees', document.getElementById('adjustRotate').value);
+          formData.append('flip', document.getElementById('adjustFlip').value);
+          promptForLibrary = 'adjust';
+        } else if (currentArea === 'tile') {
+          endpoint = '/tile';
+          formData.append('image', workingImageBlob, 'image.png');
+          formData.append('mode', document.getElementById('tileMode').value);
+          promptForLibrary = 'tile:' + document.getElementById('tileMode').value;
+        } else if (currentArea === 'maps') {
+          endpoint = '/maps';
+          formData.append('image', workingImageBlob, 'image.png');
+          formData.append('map_type', document.getElementById('mapType').value);
+          formData.append('strength', document.getElementById('mapStrength').value);
+          promptForLibrary = 'map:' + document.getElementById('mapType').value;
+        } else if (currentArea === 'extend') {
+          endpoint = '/extend';
+          promptForLibrary = document.getElementById('prompt').value || 'Seamlessly extend the image.';
+          formData.append('image', workingImageBlob, 'image.png');
+          formData.append('prompt', promptForLibrary);
+          formData.append('provider', document.getElementById('provider').value);
+          if (document.getElementById('provider').value === 'openai') {
+            formData.append('model', document.getElementById('openaiModel').value);
+          }
+          formData.append('direction', document.getElementById('direction').value);
+          formData.append('amount', document.getElementById('amount').value);
+        } else if (currentArea === 'manipulate') {
+          promptForLibrary = document.getElementById('promptManipulate').value.trim();
+          if (!promptForLibrary) throw new Error('Prompt is required for Manipulate.');
+          endpoint = '/manipulate';
+          formData.append('image', workingImageBlob, 'image.png');
+          formData.append('prompt', promptForLibrary);
+          formData.append('provider', document.getElementById('providerManipulate').value);
+          if (document.getElementById('providerManipulate').value === 'openai') {
+            formData.append('model', document.getElementById('openaiModelManipulate').value);
+          }
+          const maskInputEl = document.getElementById('maskInput');
+          if (maskBlob) formData.append('mask', maskBlob, 'mask.png');
+          else if (maskInputEl.files && maskInputEl.files[0]) formData.append('mask', maskInputEl.files[0], 'mask.png');
+        } else {
+          throw new Error('Nothing to run in this panel.');
+        }
+
+        const res = await fetch(endpoint, { method: 'POST', body: formData });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: res.statusText }));
+          throw new Error(err.detail || res.statusText);
+        }
+        const blob = await res.blob();
+        if (blob.size === 0) throw new Error('Server returned an empty image.');
+        await finishWithResult(blob, promptForLibrary);
+      } catch (err) {
+        setStatus(err.message, false);
+        errEl.textContent = err.message || 'Request failed.';
+        errEl.style.display = 'block';
+      }
+      isRequestInProgress = false;
+      updateRunButton();
+    }
+
+    function bindSlider(id, labelId) {
+      const el = document.getElementById(id);
+      const lab = document.getElementById(labelId);
+      if (!el || !lab) return;
+      el.addEventListener('input', function() { lab.textContent = el.value; });
+    }
+    bindSlider('adjustBrightness', 'brightnessVal');
+    bindSlider('adjustContrast', 'contrastVal');
+    bindSlider('adjustSaturation', 'saturationVal');
+    bindSlider('adjustSharpness', 'sharpnessVal');
+    bindSlider('adjustBlur', 'blurVal');
+    bindSlider('mapStrength', 'mapStrengthVal');
+    document.getElementById('promptCreate').addEventListener('input', updateRunButton);
+    document.getElementById('providerCreate').addEventListener('change', function() {
+      document.getElementById('modelRowCreate').style.display = this.value === 'openai' ? 'block' : 'none';
+    });
+    document.getElementById('modelRowCreate').style.display = document.getElementById('providerCreate').value === 'openai' ? 'block' : 'none';
+
+    topBarRunBtn.addEventListener('click', runOperation);
+    updateRunButton();
+    setStatus('Select an image to start.', false);
+    refreshLibraryGrid();
+    refreshMaskLibrarySelect();
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+*.egg-info/
+dist/
+build/
+
+# Local image library (use GAME_IMAGES_LIBRARY; Radical Racer uses public/dev/image-library)
+game-images/
+library.db
