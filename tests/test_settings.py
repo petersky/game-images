@@ -14,6 +14,9 @@ def settings_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("GAME_IMAGES_LIBRARY", str(tmp_path))
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("FAL_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("MINIMAX_API_KEY", raising=False)
     return tmp_path / "settings.json"
 
 
@@ -39,3 +42,12 @@ def test_env_overrides_stored(settings_file: Path, monkeypatch: pytest.MonkeyPat
     assert settings_mod.get_fal_api_key() == "env-fal"
     status = settings_mod.keys_status()
     assert status["fal"]["from_env"] is True
+
+
+def test_gemini_and_minimax_keys(settings_file: Path) -> None:
+    settings_mod.update_keys(gemini_api_key="g-test", minimax_api_key="m-test")
+    assert settings_mod.get_gemini_api_key() == "g-test"
+    assert settings_mod.get_minimax_api_key() == "m-test"
+    status = settings_mod.keys_status()
+    assert status["gemini"]["set"] is True
+    assert status["minimax"]["set"] is True

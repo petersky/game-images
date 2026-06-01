@@ -82,17 +82,11 @@ async def index() -> str:
     return p.read_text()
 
 
-def _handle_provider_error(e: Exception) -> tuple[int, str]:
-    """Map provider/core exceptions to HTTP status and user-facing message."""
-    if isinstance(e, ValueError):
-        return 400, str(e)
-    # OpenAI / Fal API and network errors
-    err_name = type(e).__name__
-    if "openai" in type(e).__module__.lower() or "fal" in type(e).__module__.lower():
-        return 502, f"Provider API error: {e!s}"
-    if isinstance(e, (RuntimeError, OSError)):
-        return 502, str(e)
-    return 500, f"Unexpected error: {e!s}"
+def _handle_provider_error(e: Exception) -> tuple[int, dict]:
+    """Map provider/core exceptions to HTTP status and structured detail for the UI."""
+    from game_images.api_errors import format_exception_for_http
+
+    return format_exception_for_http(e)
 
 
 @app.post("/shift")
@@ -370,6 +364,8 @@ class KeysUpdateBody(BaseModel):
 
     openai_api_key: str | None = None
     fal_api_key: str | None = None
+    gemini_api_key: str | None = None
+    minimax_api_key: str | None = None
 
 
 @app.get("/settings/keys")
@@ -386,7 +382,23 @@ async def settings_keys_put(body: KeysUpdateBody) -> dict:
     return update_keys(
         openai_api_key=body.openai_api_key,
         fal_api_key=body.fal_api_key,
+        gemini_api_key=body.gemini_api_key,
+        minimax_api_key=body.minimax_api_key,
     )
+
+
+@app.get("/settings/models")
+async def settings_models_get() -> dict:
+    from game_images.model_catalog import get_catalog
+
+    return get_catalog()
+
+
+@app.post("/settings/models/discover")
+async def settings_models_discover() -> dict:
+    from game_images.model_catalog import discover_all
+
+    return discover_all()
 
 
 @app.get("/health")

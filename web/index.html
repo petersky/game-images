@@ -218,7 +218,27 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     .download { display: inline-block; margin-top: 0.5rem; color: var(--accent); }
-    .error { color: #f7768e; margin-top: 0.5rem; }
+    .error { color: #f7768e; margin-top: 0.5rem; line-height: 1.45; }
+    .errorSummary { display: block; font-weight: 600; margin-bottom: 0.35rem; }
+    .errorMessage { margin: 0 0 0.5rem 0; color: #e0a8b0; font-size: 0.9rem; }
+    .errorRaw { margin-top: 0.35rem; font-size: 0.8125rem; }
+    .errorRaw summary { cursor: pointer; color: var(--muted); user-select: none; }
+    .errorRaw pre {
+      margin: 0.35rem 0 0;
+      padding: 0.5rem 0.65rem;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 6px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.75rem;
+      color: #a9b1d6;
+    }
+    .errorCopyBtn {
+      margin-top: 0.35rem;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+    }
 
     .mainLayout {
       display: flex;
@@ -524,18 +544,14 @@
           <label>Provider</label>
           <select name="providerCreate" id="providerCreate">
             <option value="openai">OpenAI</option>
+            <option value="gemini">Gemini (Nano Banana)</option>
+            <option value="minimax">MiniMax</option>
             <option value="fal">Fal (Flux)</option>
           </select>
           <div id="modelRowCreate">
-            <label for="openaiModelCreate">Model (OpenAI)</label>
-            <select name="modelCreate" id="openaiModelCreate">
-              <option value="gpt-image-1.5" selected>GPT Image 1.5 (recommended)</option>
-              <option value="gpt-image-1">GPT Image 1</option>
-              <option value="gpt-image-1-mini">GPT Image 1 Mini</option>
-              <option value="dall-e-3">DALL·E 3 (legacy)</option>
-              <option value="dall-e-2">DALL·E 2 (legacy)</option>
-            </select>
-            <p class="helpText">OpenAI is retiring DALL·E models; use GPT Image if generation fails.</p>
+            <label for="modelCreate" id="modelCreateLabel">Model</label>
+            <select name="modelCreate" id="modelCreate"></select>
+            <p id="modelCreateHint" class="helpText">Run <strong>Discover models</strong> in Settings to refresh this list.</p>
           </div>
                 <p class="helpText">Generates a new image and sets it as the active image. Open Edit to refine it.</p>
               </section>
@@ -656,13 +672,8 @@
             <option value="fal">Fal (Gemini)</option>
           </select>
           <div id="modelRow">
-            <label for="openaiModel">Model (OpenAI)</label>
-            <select name="model" id="openaiModel">
-              <option value="gpt-image-1.5" selected>GPT Image 1.5</option>
-              <option value="gpt-image-1">GPT Image 1</option>
-              <option value="gpt-image-1-mini">GPT Image 1 Mini</option>
-              <option value="dall-e-2">DALL·E 2 (legacy)</option>
-            </select>
+            <label for="modelExtend">Model (OpenAI)</label>
+            <select name="model" id="modelExtend"></select>
           </div>
                 </section>
                 <p id="errorExtend" class="error" style="display: none;"></p>
@@ -692,13 +703,8 @@
             <option value="fal">Fal (Gemini)</option>
           </select>
           <div id="modelRowManipulate">
-            <label for="openaiModelManipulate">Model (OpenAI)</label>
-            <select name="modelManipulate" id="openaiModelManipulate">
-              <option value="gpt-image-1.5" selected>GPT Image 1.5</option>
-              <option value="gpt-image-1">GPT Image 1</option>
-              <option value="gpt-image-1-mini">GPT Image 1 Mini</option>
-              <option value="dall-e-2">DALL·E 2 (legacy)</option>
-            </select>
+            <label for="modelManipulate">Model (OpenAI)</label>
+            <select name="modelManipulate" id="modelManipulate"></select>
           </div>
                 </section>
                 <p id="errorManipulate" class="error" style="display: none;"></p>
@@ -766,7 +772,7 @@
       </div>
       <section class="settingsSection">
         <h3>API keys</h3>
-        <p class="helpText">Keys are saved locally in your Game Images data folder. Environment variables (<code>OPENAI_API_KEY</code>, <code>FAL_KEY</code>) override stored values.</p>
+        <p class="helpText">Keys are saved locally in your Game Images data folder. Environment variables override stored values when set.</p>
         <div class="keyRow">
           <label for="openaiKeyInput">OpenAI API key</label>
           <p id="openaiKeyStatus" class="keyStatus"></p>
@@ -774,6 +780,24 @@
           <div class="keyActions">
             <button type="button" id="openaiKeySaveBtn">Save</button>
             <button type="button" id="openaiKeyRemoveBtn" class="secondary">Remove</button>
+          </div>
+        </div>
+        <div class="keyRow">
+          <label for="geminiKeyInput">Gemini API key (Nano Banana)</label>
+          <p id="geminiKeyStatus" class="keyStatus"></p>
+          <input type="password" id="geminiKeyInput" autocomplete="off" spellcheck="false" placeholder="AIza…" />
+          <div class="keyActions">
+            <button type="button" id="geminiKeySaveBtn">Save</button>
+            <button type="button" id="geminiKeyRemoveBtn" class="secondary">Remove</button>
+          </div>
+        </div>
+        <div class="keyRow">
+          <label for="minimaxKeyInput">MiniMax API key</label>
+          <p id="minimaxKeyStatus" class="keyStatus"></p>
+          <input type="password" id="minimaxKeyInput" autocomplete="off" spellcheck="false" placeholder="MiniMax key…" />
+          <div class="keyActions">
+            <button type="button" id="minimaxKeySaveBtn">Save</button>
+            <button type="button" id="minimaxKeyRemoveBtn" class="secondary">Remove</button>
           </div>
         </div>
         <div class="keyRow">
@@ -785,6 +809,14 @@
             <button type="button" id="falKeyRemoveBtn" class="secondary">Remove</button>
           </div>
         </div>
+      </section>
+      <section class="settingsSection">
+        <h3>Available models</h3>
+        <p class="helpText">Discover which image models your API keys can use. Model dropdowns in Create and Edit will only show discovered options.</p>
+        <div class="keyActions">
+          <button type="button" id="discoverModelsBtn">Discover models</button>
+        </div>
+        <p id="modelsDiscoverStatus" class="keyStatus"></p>
         <p id="settingsError" class="error" style="display: none;"></p>
         <p id="settingsPathHint" class="helpText" style="margin-top: 1rem;"></p>
       </section>
@@ -863,13 +895,119 @@
       return fetch(apiUrl(path), options);
     }
 
-    function errorFromResponse(res, errBody, path) {
-      const detail = errBody && errBody.detail;
-      const msg = typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map(function(d) { return d.msg || d; }).join('; ') : res.statusText;
-      if (res.status === 404) {
-        return 'API not found at ' + apiUrl(path) + '. Run game-images serve from main/ and open http://127.0.0.1:8000 (not a static file or Live Server URL).';
+    function parseApiErrorDetail(detail, status, path) {
+      if (status === 404) {
+        return {
+          summary: 'API not found',
+          message: 'Run game-images serve from main/ and open http://127.0.0.1:8000 (not a static file or Live Server URL). Request: ' + apiUrl(path),
+          raw: null,
+        };
       }
-      return msg || 'Request failed';
+      if (detail && typeof detail === 'object' && !Array.isArray(detail) && detail.summary) {
+        return {
+          summary: detail.summary,
+          message: detail.message || detail.summary,
+          provider: detail.provider || null,
+          status: detail.status || status,
+          code: detail.code || null,
+          raw: detail.raw || null,
+        };
+      }
+      let text = '';
+      if (typeof detail === 'string') {
+        text = detail;
+      } else if (Array.isArray(detail)) {
+        text = detail.map(function(d) { return d.msg || String(d); }).join('; ');
+      } else {
+        text = 'Request failed';
+      }
+      if (text.indexOf('Provider API error: ') === 0) {
+        text = text.slice('Provider API error: '.length);
+      }
+      const lower = text.toLowerCase();
+      if (lower.indexOf('billing hard limit') !== -1) {
+        return {
+          summary: 'OpenAI billing limit reached',
+          message: 'Your OpenAI account hit its billing hard limit. Add credits or raise the limit in the OpenAI dashboard.',
+          raw: text,
+        };
+      }
+      if (lower.indexOf('resource_exhausted') !== -1 || lower.indexOf('exceeded your current quota') !== -1) {
+        return {
+          summary: 'Gemini API quota exceeded',
+          message: 'Gemini image generation is not available on your current quota. Enable billing in Google AI Studio or use another provider.',
+          raw: text,
+        };
+      }
+      return {
+        summary: 'Request failed',
+        message: text.split('\n')[0].slice(0, 400) || 'Request failed',
+        raw: text,
+      };
+    }
+
+    function errorInfoFromThrown(err) {
+      if (err && err.apiError) return err.apiError;
+      const msg = (err && err.message) || 'Request failed';
+      return { summary: msg, message: msg, raw: null };
+    }
+
+    function parseApiError(res, errBody, path) {
+      const detail = errBody && errBody.detail;
+      return parseApiErrorDetail(detail, res.status, path);
+    }
+
+    function apiErrorToError(errInfo) {
+      const err = new Error(errInfo.summary || 'Request failed');
+      err.apiError = errInfo;
+      return err;
+    }
+
+    function showApiError(containerEl, errInfo) {
+      if (!containerEl || !errInfo) return;
+      containerEl.innerHTML = '';
+      containerEl.style.display = 'block';
+      const summary = document.createElement('span');
+      summary.className = 'errorSummary';
+      summary.textContent = errInfo.summary || 'Request failed';
+      containerEl.appendChild(summary);
+      if (errInfo.message && errInfo.message !== errInfo.summary) {
+        const msg = document.createElement('p');
+        msg.className = 'errorMessage';
+        msg.textContent = errInfo.message;
+        containerEl.appendChild(msg);
+      }
+      const rawText = errInfo.raw;
+      if (rawText) {
+        const details = document.createElement('details');
+        details.className = 'errorRaw';
+        const sum = document.createElement('summary');
+        sum.textContent = 'Technical details';
+        details.appendChild(sum);
+        const pre = document.createElement('pre');
+        pre.textContent = rawText;
+        details.appendChild(pre);
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'secondary errorCopyBtn';
+        copyBtn.textContent = 'Copy raw error';
+        copyBtn.addEventListener('click', function() {
+          navigator.clipboard.writeText(rawText).then(function() {
+            copyBtn.textContent = 'Copied';
+            setTimeout(function() { copyBtn.textContent = 'Copy raw error'; }, 2000);
+          }).catch(function() {
+            copyBtn.textContent = 'Copy failed';
+          });
+        });
+        details.appendChild(copyBtn);
+        containerEl.appendChild(details);
+      }
+    }
+
+    function clearApiError(containerEl) {
+      if (!containerEl) return;
+      containerEl.innerHTML = '';
+      containerEl.style.display = 'none';
     }
 
     (async function checkApi() {
@@ -880,51 +1018,225 @@
       el.innerHTML = 'Game Images API not reachable. Run <code>game-images serve</code> in the <code>main/</code> directory, then open <a href="http://127.0.0.1:8000">http://127.0.0.1:8000</a> (not a static file or Live Server URL). Current page: ' + window.location.href;
     })();
 
+    let modelCatalog = null;
+    const CREATE_PROVIDERS = ['openai', 'gemini', 'minimax', 'fal'];
+    const CREATE_PROVIDER_LABELS = {
+      openai: 'OpenAI',
+      gemini: 'Gemini (Nano Banana)',
+      minimax: 'MiniMax',
+      fal: 'Fal (Flux)',
+    };
+    function fillModelSelect(selectEl, models, preferredId) {
+      const prev = selectEl.value;
+      selectEl.innerHTML = '';
+      if (!models || !models.length) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '(No models — run Discover in Settings)';
+        selectEl.appendChild(opt);
+        return;
+      }
+      models.forEach(function(m, i) {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.label || m.id;
+        if (preferredId ? m.id === preferredId : (prev && m.id === prev) || (!prev && i === 0)) {
+          opt.selected = true;
+        }
+        selectEl.appendChild(opt);
+      });
+      if (prev && selectEl.querySelector('option[value="' + CSS.escape(prev) + '"]')) {
+        selectEl.value = prev;
+      }
+    }
+
+    function modelsForProvider(provider, capability) {
+      if (!modelCatalog || !modelCatalog.providers) return [];
+      const prov = modelCatalog.providers[provider];
+      if (!prov) return [];
+      const list = prov[capability];
+      return Array.isArray(list) ? list : [];
+    }
+
+    function syncCreateProviderOptions() {
+      const sel = document.getElementById('providerCreate');
+      const current = sel.value;
+      sel.innerHTML = '';
+      CREATE_PROVIDERS.forEach(function(p) {
+        const models = modelsForProvider(p, 'create');
+        if (modelCatalog && modelCatalog.discovered_at && !models.length) return;
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = CREATE_PROVIDER_LABELS[p] || p;
+        sel.appendChild(opt);
+      });
+      if (current && sel.querySelector('option[value="' + CSS.escape(current) + '"]')) {
+        sel.value = current;
+      } else if (sel.options.length) {
+        sel.selectedIndex = 0;
+      }
+    }
+
+    function syncCreateModelRow() {
+      const provider = document.getElementById('providerCreate').value;
+      const row = document.getElementById('modelRowCreate');
+      const needsModel = provider === 'openai' || provider === 'gemini' || provider === 'minimax';
+      row.style.display = needsModel ? 'block' : 'none';
+      const label = document.getElementById('modelCreateLabel');
+      label.textContent = 'Model (' + (CREATE_PROVIDER_LABELS[provider] || provider) + ')';
+      if (needsModel) {
+        fillModelSelect(document.getElementById('modelCreate'), modelsForProvider(provider, 'create'));
+      }
+      const hint = document.getElementById('modelCreateHint');
+      if (modelCatalog && modelCatalog.discovered_at) {
+        hint.textContent = 'Models from your last discovery run.';
+      } else {
+        hint.textContent = 'Run Discover models in Settings to refresh this list for your API keys.';
+      }
+    }
+
+    function syncExtendOpenaiModels() {
+      fillModelSelect(document.getElementById('modelExtend'), modelsForProvider('openai', 'extend'));
+    }
+
+    function syncManipulateOpenaiModels() {
+      fillModelSelect(document.getElementById('modelManipulate'), modelsForProvider('openai', 'manipulate'));
+    }
+
+    function applyModelCatalogToUI() {
+      syncCreateProviderOptions();
+      syncCreateModelRow();
+      syncExtendOpenaiModels();
+      syncManipulateOpenaiModels();
+    }
+
+    async function loadModelCatalog() {
+      if (!apiOrigin) {
+        const ok = await resolveApiOrigin();
+        if (!ok) return;
+      }
+      const r = await apiFetch('/settings/models');
+      if (!r.ok) return;
+      modelCatalog = await r.json();
+      applyModelCatalogToUI();
+    }
+
+    async function discoverModels() {
+      const statusEl = document.getElementById('modelsDiscoverStatus');
+      const btn = document.getElementById('discoverModelsBtn');
+      if (!apiOrigin) {
+        const ok = await resolveApiOrigin();
+        if (!ok) {
+          statusEl.textContent = 'Connect to the Game Images server first.';
+          return;
+        }
+      }
+      btn.disabled = true;
+      statusEl.textContent = 'Discovering models…';
+      try {
+        const r = await apiFetch('/settings/models/discover', { method: 'POST' });
+        if (!r.ok) {
+          const err = await r.json().catch(function() { return {}; });
+          throw apiErrorToError(parseApiError(r, err, '/settings/models/discover'));
+        }
+        modelCatalog = await r.json();
+        applyModelCatalogToUI();
+        let msg = 'Discovery complete.';
+        if (modelCatalog.discovered_at) {
+          msg += ' ' + new Date(modelCatalog.discovered_at).toLocaleString();
+        }
+        const errs = modelCatalog.errors || {};
+        const errParts = Object.keys(errs).map(function(k) { return k + ': ' + errs[k]; });
+        if (errParts.length) msg += ' Issues: ' + errParts.join('; ');
+        statusEl.textContent = msg;
+      } catch (err) {
+        const info = errorInfoFromThrown(err);
+        statusEl.textContent = info.summary + (info.message && info.message !== info.summary ? ' — ' + info.message : '');
+      }
+      btn.disabled = false;
+    }
+
+    document.getElementById('providerCreate').addEventListener('change', syncCreateModelRow);
+    loadModelCatalog();
+
     (function initSettings() {
       const modal = document.getElementById('settingsModal');
       const openBtn = document.getElementById('settingsOpenBtn');
       const closeBtn = document.getElementById('settingsCloseBtn');
       const settingsError = document.getElementById('settingsError');
       const settingsPathHint = document.getElementById('settingsPathHint');
-      const openaiInput = document.getElementById('openaiKeyInput');
-      const falInput = document.getElementById('falKeyInput');
-      const openaiStatus = document.getElementById('openaiKeyStatus');
-      const falStatus = document.getElementById('falKeyStatus');
-      const openaiSave = document.getElementById('openaiKeySaveBtn');
-      const openaiRemove = document.getElementById('openaiKeyRemoveBtn');
-      const falSave = document.getElementById('falKeySaveBtn');
-      const falRemove = document.getElementById('falKeyRemoveBtn');
+      const keyFields = {
+        openai: {
+          input: document.getElementById('openaiKeyInput'),
+          status: document.getElementById('openaiKeyStatus'),
+          save: document.getElementById('openaiKeySaveBtn'),
+          remove: document.getElementById('openaiKeyRemoveBtn'),
+          env: 'OPENAI_API_KEY',
+          placeholder: 'sk-…',
+          bodyKey: 'openai_api_key',
+        },
+        gemini: {
+          input: document.getElementById('geminiKeyInput'),
+          status: document.getElementById('geminiKeyStatus'),
+          save: document.getElementById('geminiKeySaveBtn'),
+          remove: document.getElementById('geminiKeyRemoveBtn'),
+          env: 'GEMINI_API_KEY or GOOGLE_API_KEY',
+          placeholder: 'AIza…',
+          bodyKey: 'gemini_api_key',
+        },
+        minimax: {
+          input: document.getElementById('minimaxKeyInput'),
+          status: document.getElementById('minimaxKeyStatus'),
+          save: document.getElementById('minimaxKeySaveBtn'),
+          remove: document.getElementById('minimaxKeyRemoveBtn'),
+          env: 'MINIMAX_API_KEY',
+          placeholder: 'MiniMax key…',
+          bodyKey: 'minimax_api_key',
+        },
+        fal: {
+          input: document.getElementById('falKeyInput'),
+          status: document.getElementById('falKeyStatus'),
+          save: document.getElementById('falKeySaveBtn'),
+          remove: document.getElementById('falKeyRemoveBtn'),
+          env: 'FAL_KEY',
+          placeholder: 'Fal key…',
+          bodyKey: 'fal_api_key',
+        },
+      };
+      const discoverBtn = document.getElementById('discoverModelsBtn');
 
-      function showSettingsError(msg) {
-        settingsError.textContent = msg || '';
-        settingsError.style.display = msg ? 'block' : 'none';
+      function showSettingsError(msgOrInfo) {
+        if (!msgOrInfo) {
+          clearApiError(settingsError);
+          return;
+        }
+        const info = typeof msgOrInfo === 'string'
+          ? { summary: 'Settings', message: msgOrInfo, raw: null }
+          : msgOrInfo;
+        showApiError(settingsError, info);
       }
 
       function renderKeyRow(which, info) {
-        const statusEl = which === 'openai' ? openaiStatus : falStatus;
-        const inputEl = which === 'openai' ? openaiInput : falInput;
-        const saveBtn = which === 'openai' ? openaiSave : falSave;
-        const removeBtn = which === 'openai' ? openaiRemove : falRemove;
-        const envName = which === 'openai' ? 'OPENAI_API_KEY' : 'FAL_KEY';
-
+        const f = keyFields[which];
+        if (!f || !info) return;
         if (info.from_env) {
-          statusEl.textContent = 'Using environment variable ' + envName + (info.hint ? ' (' + info.hint + ')' : '') + '.';
-          inputEl.disabled = true;
-          inputEl.placeholder = 'Set via environment variable';
-          saveBtn.disabled = true;
-          removeBtn.disabled = true;
+          f.status.textContent = 'Using environment variable ' + f.env + (info.hint ? ' (' + info.hint + ')' : '') + '.';
+          f.input.disabled = true;
+          f.input.placeholder = 'Set via environment variable';
+          f.save.disabled = true;
+          f.remove.disabled = true;
         } else if (info.set && info.hint) {
-          statusEl.textContent = 'Saved: ' + info.hint;
-          inputEl.disabled = false;
-          inputEl.placeholder = 'Enter a new key to replace';
-          saveBtn.disabled = false;
-          removeBtn.disabled = false;
+          f.status.textContent = 'Saved: ' + info.hint;
+          f.input.disabled = false;
+          f.input.placeholder = 'Enter a new key to replace';
+          f.save.disabled = false;
+          f.remove.disabled = false;
         } else {
-          statusEl.textContent = 'Not set';
-          inputEl.disabled = false;
-          inputEl.placeholder = which === 'openai' ? 'sk-…' : 'Fal key…';
-          saveBtn.disabled = false;
-          removeBtn.disabled = true;
+          f.status.textContent = 'Not set';
+          f.input.disabled = false;
+          f.input.placeholder = f.placeholder;
+          f.save.disabled = false;
+          f.remove.disabled = true;
         }
       }
 
@@ -943,10 +1255,15 @@
           return;
         }
         const data = await r.json();
-        renderKeyRow('openai', data.openai);
-        renderKeyRow('fal', data.fal);
+        ['openai', 'gemini', 'minimax', 'fal'].forEach(function(which) {
+          renderKeyRow(which, data[which]);
+        });
         if (data.settings_path) {
           settingsPathHint.textContent = 'Stored keys file: ' + data.settings_path;
+        }
+        if (modelCatalog && modelCatalog.discovered_at) {
+          document.getElementById('modelsDiscoverStatus').textContent =
+            'Last discovery: ' + new Date(modelCatalog.discovered_at).toLocaleString();
         }
       }
 
@@ -958,23 +1275,26 @@
         });
         if (!r.ok) {
           const err = await r.json().catch(function() { return {}; });
-          throw new Error(errorFromResponse(r, err, '/settings/keys'));
+          throw apiErrorToError(parseApiError(r, err, '/settings/keys'));
         }
         return r.json();
       }
 
       function openSettings() {
         modal.classList.add('visible');
-        openaiInput.value = '';
-        falInput.value = '';
+        Object.keys(keyFields).forEach(function(which) {
+          keyFields[which].input.value = '';
+        });
         loadKeysStatus();
+        loadModelCatalog();
       }
 
       function closeSettings() {
         modal.classList.remove('visible');
         showSettingsError('');
-        openaiInput.value = '';
-        falInput.value = '';
+        Object.keys(keyFields).forEach(function(which) {
+          keyFields[which].input.value = '';
+        });
       }
 
       openBtn.addEventListener('click', openSettings);
@@ -986,55 +1306,49 @@
         if (e.key === 'Escape' && modal.classList.contains('visible')) closeSettings();
       });
 
-      openaiSave.addEventListener('click', async function() {
-        const val = openaiInput.value.trim();
-        if (!val) {
-          showSettingsError('Enter an OpenAI API key to save.');
-          return;
-        }
-        try {
-          await putKeys({ openai_api_key: val });
-          openaiInput.value = '';
-          await loadKeysStatus();
-        } catch (err) {
-          showSettingsError(err.message);
-        }
-      });
+      function bindKeySave(which, label) {
+        keyFields[which].save.addEventListener('click', async function() {
+          const val = keyFields[which].input.value.trim();
+          if (!val) {
+            showSettingsError('Enter a ' + label + ' API key to save.');
+            return;
+          }
+          const body = {};
+          body[keyFields[which].bodyKey] = val;
+          try {
+            await putKeys(body);
+            keyFields[which].input.value = '';
+            await loadKeysStatus();
+          } catch (err) {
+            showSettingsError(errorInfoFromThrown(err));
+          }
+        });
+      }
 
-      openaiRemove.addEventListener('click', async function() {
-        try {
-          await putKeys({ openai_api_key: '' });
-          openaiInput.value = '';
-          await loadKeysStatus();
-        } catch (err) {
-          showSettingsError(err.message);
-        }
-      });
+      function bindKeyRemove(which) {
+        keyFields[which].remove.addEventListener('click', async function() {
+          const body = {};
+          body[keyFields[which].bodyKey] = '';
+          try {
+            await putKeys(body);
+            keyFields[which].input.value = '';
+            await loadKeysStatus();
+          } catch (err) {
+            showSettingsError(errorInfoFromThrown(err));
+          }
+        });
+      }
 
-      falSave.addEventListener('click', async function() {
-        const val = falInput.value.trim();
-        if (!val) {
-          showSettingsError('Enter a Fal API key to save.');
-          return;
-        }
-        try {
-          await putKeys({ fal_api_key: val });
-          falInput.value = '';
-          await loadKeysStatus();
-        } catch (err) {
-          showSettingsError(err.message);
-        }
-      });
+      bindKeySave('openai', 'OpenAI');
+      bindKeySave('gemini', 'Gemini');
+      bindKeySave('minimax', 'MiniMax');
+      bindKeySave('fal', 'Fal');
+      bindKeyRemove('openai');
+      bindKeyRemove('gemini');
+      bindKeyRemove('minimax');
+      bindKeyRemove('fal');
 
-      falRemove.addEventListener('click', async function() {
-        try {
-          await putKeys({ fal_api_key: '' });
-          falInput.value = '';
-          await loadKeysStatus();
-        } catch (err) {
-          showSettingsError(err.message);
-        }
-      });
+      discoverBtn.addEventListener('click', discoverModels);
     })();
 
     function formatBytes(n) {
@@ -1387,8 +1701,8 @@
       try {
         const res = await apiFetch('/shift', { method: 'POST', body: formData });
         if (!res.ok) {
-          const err = await res.json().catch(() => ({ detail: res.statusText }));
-          throw new Error(err.detail || res.statusText);
+          const err = await res.json().catch(function() { return {}; });
+          throw apiErrorToError(parseApiError(res, err, '/shift'));
         }
         const blob = await res.blob();
         if (blob.size === 0) {
@@ -1404,7 +1718,9 @@
         setStatus('Shift applied — use Extend to fill blank edges.', false);
         updateRunButton();
       } catch (err) {
-        setStatus(err.message, false);
+        const info = errorInfoFromThrown(err);
+        setStatus(info.summary, false);
+        showApiError(document.getElementById('errorPrepare'), info);
       }
       applyShiftBtn.disabled = false;
     });
@@ -1707,7 +2023,7 @@
 
     async function runOperation() {
       const errEl = getErrorEl();
-      errEl.style.display = 'none';
+      clearApiError(errEl);
       isRequestInProgress = true;
       updateRunButton();
       setStatus('Working…', true);
@@ -1731,9 +2047,12 @@
           formData.append('prompt', promptForLibrary);
           formData.append('width', document.getElementById('createWidth').value);
           formData.append('height', document.getElementById('createHeight').value);
-          formData.append('provider', document.getElementById('providerCreate').value);
-          if (document.getElementById('providerCreate').value === 'openai') {
-            formData.append('model', document.getElementById('openaiModelCreate').value);
+          const createProvider = document.getElementById('providerCreate').value;
+          formData.append('provider', createProvider);
+          if (createProvider === 'openai' || createProvider === 'gemini' || createProvider === 'minimax') {
+            const modelId = document.getElementById('modelCreate').value;
+            if (!modelId) throw new Error('Select a model (run Discover models in Settings).');
+            formData.append('model', modelId);
           }
         } else if (!workingImageBlob) {
           throw new Error('Select an image in Library or create one first.');
@@ -1766,7 +2085,9 @@
           formData.append('prompt', promptForLibrary);
           formData.append('provider', document.getElementById('provider').value);
           if (document.getElementById('provider').value === 'openai') {
-            formData.append('model', document.getElementById('openaiModel').value);
+            const extendModel = document.getElementById('modelExtend').value;
+            if (!extendModel) throw new Error('Select an OpenAI model (run Discover models in Settings).');
+            formData.append('model', extendModel);
           }
           formData.append('direction', document.getElementById('direction').value);
           formData.append('amount', document.getElementById('amount').value);
@@ -1778,7 +2099,9 @@
           formData.append('prompt', promptForLibrary);
           formData.append('provider', document.getElementById('providerManipulate').value);
           if (document.getElementById('providerManipulate').value === 'openai') {
-            formData.append('model', document.getElementById('openaiModelManipulate').value);
+            const manipModel = document.getElementById('modelManipulate').value;
+            if (!manipModel) throw new Error('Select an OpenAI model (run Discover models in Settings).');
+            formData.append('model', manipModel);
           }
           const maskInputEl = document.getElementById('maskInput');
           if (maskBlob) formData.append('mask', maskBlob, 'mask.png');
@@ -1790,15 +2113,15 @@
         const res = await apiFetch(endpoint, { method: 'POST', body: formData });
         if (!res.ok) {
           const err = await res.json().catch(function() { return {}; });
-          throw new Error(errorFromResponse(res, err, endpoint));
+          throw apiErrorToError(parseApiError(res, err, endpoint));
         }
         const blob = await res.blob();
         if (blob.size === 0) throw new Error('Server returned an empty image.');
         await finishWithResult(blob, promptForLibrary);
       } catch (err) {
-        setStatus(err.message, false);
-        errEl.textContent = err.message || 'Request failed.';
-        errEl.style.display = 'block';
+        const info = errorInfoFromThrown(err);
+        setStatus(info.summary, false);
+        showApiError(errEl, info);
       }
       isRequestInProgress = false;
       updateRunButton();
@@ -1818,11 +2141,6 @@
     bindSlider('mapStrength', 'mapStrengthVal');
     document.getElementById('promptCreate').addEventListener('input', updateRunButton);
     document.getElementById('promptManipulate').addEventListener('input', updateRunButton);
-    document.getElementById('providerCreate').addEventListener('change', function() {
-      document.getElementById('modelRowCreate').style.display = this.value === 'openai' ? 'block' : 'none';
-    });
-    document.getElementById('modelRowCreate').style.display = document.getElementById('providerCreate').value === 'openai' ? 'block' : 'none';
-
     topBarRunBtn.addEventListener('click', runOperation);
     updateRunButton();
     updateActiveImageBar();

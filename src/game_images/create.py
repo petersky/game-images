@@ -10,9 +10,11 @@ from typing import Literal
 
 from PIL import Image
 
+from game_images.gemini_image import create_image_gemini
+from game_images.minimax_image import create_image_minimax
 from game_images.settings import get_fal_api_key, get_openai_api_key
 
-ProviderName = Literal["openai", "fal"]
+ProviderName = Literal["openai", "fal", "gemini", "minimax"]
 
 DEFAULT_OPENAI_CREATE_MODEL = "gpt-image-1.5"
 FALLBACK_OPENAI_CREATE_MODEL = "gpt-image-1.5"
@@ -198,4 +200,8 @@ def create_image(
         )
     if provider_name == "fal":
         return create_image_fal(prompt, width, height, api_key=get_fal_api_key())
+    if provider_name == "gemini":
+        return create_image_gemini(prompt, width, height, model=model)
+    if provider_name == "minimax":
+        return create_image_minimax(prompt, width, height, model=model)
     raise ValueError(f"Unknown provider: {provider_name}")

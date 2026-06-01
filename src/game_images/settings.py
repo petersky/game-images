@@ -12,6 +12,8 @@ from game_images.library import get_library_path
 _SETTINGS_FILENAME = "settings.json"
 _KEY_OPENAI = "openai_api_key"
 _KEY_FAL = "fal_api_key"
+_KEY_GEMINI = "gemini_api_key"
+_KEY_MINIMAX = "minimax_api_key"
 
 
 def _settings_path() -> Path:
@@ -66,13 +68,37 @@ def get_fal_api_key() -> str | None:
     return stored or None
 
 
+def get_gemini_api_key() -> str | None:
+    for env_name in ("GEMINI_API_KEY", "GOOGLE_API_KEY"):
+        env = os.environ.get(env_name, "").strip()
+        if env:
+            return env
+    stored = (_load_raw().get(_KEY_GEMINI) or "").strip()
+    return stored or None
+
+
+def get_minimax_api_key() -> str | None:
+    env = os.environ.get("MINIMAX_API_KEY", "").strip()
+    if env:
+        return env
+    stored = (_load_raw().get(_KEY_MINIMAX) or "").strip()
+    return stored or None
+
+
 def keys_status() -> dict[str, Any]:
     """Public key status for the UI (masked, no raw secrets)."""
     raw = _load_raw()
     openai_stored = (raw.get(_KEY_OPENAI) or "").strip()
     fal_stored = (raw.get(_KEY_FAL) or "").strip()
+    gemini_stored = (raw.get(_KEY_GEMINI) or "").strip()
+    minimax_stored = (raw.get(_KEY_MINIMAX) or "").strip()
     openai_env = bool(os.environ.get("OPENAI_API_KEY", "").strip())
     fal_env = bool(os.environ.get("FAL_KEY", "").strip())
+    gemini_env = bool(
+        os.environ.get("GEMINI_API_KEY", "").strip()
+        or os.environ.get("GOOGLE_API_KEY", "").strip()
+    )
+    minimax_env = bool(os.environ.get("MINIMAX_API_KEY", "").strip())
     return {
         "openai": {
             "set": bool(openai_stored or openai_env),
@@ -84,6 +110,22 @@ def keys_status() -> dict[str, Any]:
             "from_env": fal_env,
             "hint": mask_secret(os.environ.get("FAL_KEY", "") or fal_stored),
         },
+        "gemini": {
+            "set": bool(gemini_stored or gemini_env),
+            "from_env": gemini_env,
+            "hint": mask_secret(
+                os.environ.get("GEMINI_API_KEY", "")
+                or os.environ.get("GOOGLE_API_KEY", "")
+                or gemini_stored
+            ),
+        },
+        "minimax": {
+            "set": bool(minimax_stored or minimax_env),
+            "from_env": minimax_env,
+            "hint": mask_secret(
+                os.environ.get("MINIMAX_API_KEY", "") or minimax_stored
+            ),
+        },
         "settings_path": str(_settings_path()),
     }
 
@@ -92,6 +134,8 @@ def update_keys(
     *,
     openai_api_key: str | None = None,
     fal_api_key: str | None = None,
+    gemini_api_key: str | None = None,
+    minimax_api_key: str | None = None,
 ) -> dict[str, Any]:
     """Update stored keys. Pass None to leave unchanged, '' to remove stored value."""
     data = _load_raw()
@@ -105,5 +149,15 @@ def update_keys(
             data[_KEY_FAL] = fal_api_key.strip()
         else:
             data.pop(_KEY_FAL, None)
+    if gemini_api_key is not None:
+        if gemini_api_key.strip():
+            data[_KEY_GEMINI] = gemini_api_key.strip()
+        else:
+            data.pop(_KEY_GEMINI, None)
+    if minimax_api_key is not None:
+        if minimax_api_key.strip():
+            data[_KEY_MINIMAX] = minimax_api_key.strip()
+        else:
+            data.pop(_KEY_MINIMAX, None)
     _save_raw(data)
     return keys_status()

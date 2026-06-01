@@ -1,6 +1,6 @@
 # Game Images
 
-Create and edit game images: **create** (text-to-image), **adjust**, **tile**, **texture maps**, plus AI **extend** (outpaint) and **manipulate** (inpaint) with OpenAI and Fal.ai providers.
+Create and edit game images: **create** (text-to-image), **adjust**, **tile**, **texture maps**, plus AI **extend** (outpaint) and **manipulate** (inpaint) with OpenAI, Gemini (Nano Banana), MiniMax, and Fal.ai providers.
 
 ## Setup
 
@@ -15,9 +15,15 @@ pip install -e .
 **Environment variables** override stored keys (useful for CI or shells):
 
 - **OpenAI**: `OPENAI_API_KEY`
+- **Gemini** (Nano Banana image models): `GEMINI_API_KEY` or `GOOGLE_API_KEY`
+- **MiniMax** (image generation): `MINIMAX_API_KEY`
 - **Fal**: `FAL_KEY`
 
 Do not commit `.env`, `settings.json`, or keys to the repo.
+
+### Discovering models
+
+In **Settings**, click **Discover models** once (or after adding keys). Game Images probes each configured provider and saves an **available models** catalog in `settings.json`. Create and Edit model dropdowns then only list models your keys can use. Before the first discovery run, sensible defaults are shown.
 
 ### OpenAI image models
 
@@ -85,7 +91,7 @@ Run the local web interface:
 game-images serve
 ```
 
-Then open http://127.0.0.1:8000 . Use the **gear icon** (top right) to set OpenAI and Fal API keys before Create / Extend / Manipulate.
+Then open http://127.0.0.1:8000 . Use the **gear icon** (top right) to set API keys and run **Discover models** before Create / Extend / Manipulate.
 
 **Library → Edit → Create** flow:
 
