@@ -197,12 +197,13 @@ async def api_create(
     w = max(64, min(2048, width))
     h = max(64, min(2048, height))
     try:
+        model_name = (model or "").strip() or None
         result = create_image_fn(
             prompt,
             w,
             h,
             provider_name=provider.lower(),  # type: ignore[arg-type]
-            model=model or None,
+            model=model_name,
         )
     except Exception as e:
         status, detail = _handle_provider_error(e)
