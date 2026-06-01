@@ -53,6 +53,7 @@ def _core():
         manipulate_image,
         shift_image,
         tile_image,
+        zoom_image,
     )
     from game_images.providers.base import Direction
     return (
@@ -64,16 +65,19 @@ def _core():
         adjust_image,
         tile_image,
         generate_texture_map,
+        zoom_image,
     )
 
 
 def _parse_directions(s: str) -> list[str]:
-    allowed = {"north", "south", "east", "west"}
+    allowed = {"north", "south", "east", "west", "all"}
     parts = [p.strip().lower() for p in (s or "north").split(",") if p.strip()]
+    if len(parts) == 1 and parts[0] == "all":
+        return ["north", "south", "east", "west"]
     for p in parts:
         if p not in allowed:
             return ["north"]
-    return parts if parts else ["north"]
+    return [p for p in parts if p != "all"] or ["north"]
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -146,6 +150,54 @@ async def api_extend(
             provider_name=provider.lower(),
             model=model or None,
         )
+    except Exception as e:
+        status, detail = _handle_provider_error(e)
+        raise HTTPException(status_code=status, detail=detail)
+    return Response(content=result, media_type="image/png")
+
+
+@app.post("/zoom")
+async def api_zoom(
+    image: UploadFile = File(...),
+    mode: str = Form("out"),
+    factor: float = Form(1.5),
+    center_x: float = Form(0.5),
+    center_y: float = Form(0.5),
+    enhance: str = Form("false"),
+    prompt: str = Form(""),
+    provider: str = Form("openai"),
+    model: str | None = Form(None),
+) -> Response:
+    _, _, _, _, _, _, _, zoom_image_fn = _core()
+    zoom_mode = (mode or "out").strip().lower()
+    if zoom_mode not in ("in", "out"):
+        raise HTTPException(status_code=400, detail="mode must be in or out")
+    try:
+        factor_f = float(factor)
+    except (TypeError, ValueError):
+        factor_f = 1.5
+    if factor_f < 1.05 or factor_f > 4.0:
+        raise HTTPException(
+            status_code=400,
+            detail="factor must be between 1.05 and 4.0",
+        )
+    do_enhance = (enhance or "").strip().lower() in ("1", "true", "yes", "on")
+    try:
+        body = await image.read()
+        body = normalize_upload_to_png(body)
+        result = zoom_image_fn(
+            body,
+            zoom_mode,  # type: ignore[arg-type]
+            factor=factor_f,
+            center_x=float(center_x),
+            center_y=float(center_y),
+            enhance=do_enhance,
+            prompt=prompt or "",
+            provider_name=provider.lower(),  # type: ignore[arg-type]
+            model=model or None,
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         status, detail = _handle_provider_error(e)
         raise HTTPException(status_code=status, detail=detail)

@@ -188,3 +188,21 @@ def tile_image(image: bytes, mode: TileMode) -> bytes:
     else:
         raise ValueError(f"Unknown tile mode: {mode}")
     return _save_png(out)
+
+
+def crop_image(
+    image: bytes,
+    *,
+    left: int,
+    top: int,
+    width: int,
+    height: int,
+) -> bytes:
+    """Crop to a rectangle in pixel coordinates (clamped to image bounds)."""
+    img = _to_rgba(image)
+    w, h = img.size
+    left_i = max(0, min(int(left), w - 1))
+    top_i = max(0, min(int(top), h - 1))
+    right_i = max(left_i + 1, min(left_i + int(width), w))
+    bottom_i = max(top_i + 1, min(top_i + int(height), h))
+    return _save_png(img.crop((left_i, top_i, right_i, bottom_i)))

@@ -78,6 +78,25 @@ class OpenAIProvider:
         from openai import OpenAI
         return OpenAI(api_key=self._api_key)
 
+    def extend_margins(
+        self,
+        image: bytes,
+        *,
+        left: int,
+        top: int,
+        right: int,
+        bottom: int,
+        prompt: str,
+        image_format: str = "png",
+    ) -> bytes:
+        """Extend with explicit pixel margins per side (outpaint)."""
+        if left == top == right == bottom == 0:
+            return image
+        canvas_bytes, mask_bytes = _build_outpaint_canvas_and_mask(
+            image, left, top, right, bottom
+        )
+        return self._edit_canvas(canvas_bytes, mask_bytes, prompt)
+
     def extend(
         self,
         image: bytes,
@@ -90,9 +109,22 @@ class OpenAIProvider:
         left, top, right, bottom = _directions_to_expand(directions, amount_px)
         if left == top == right == bottom == 0:
             return image
-        canvas_bytes, mask_bytes = _build_outpaint_canvas_and_mask(
-            image, left, top, right, bottom
+        return self.extend_margins(
+            image,
+            left=left,
+            top=top,
+            right=right,
+            bottom=bottom,
+            prompt=prompt,
+            image_format=image_format,
         )
+
+    def _edit_canvas(
+        self,
+        canvas_bytes: bytes,
+        mask_bytes: bytes,
+        prompt: str,
+    ) -> bytes:
         edit_prompt = prompt or "Seamlessly extend the image in the new area."
         client = self._client()
         # Pass (filename, bytes, content_type) so the API receives image/png, not application/octet-stream

@@ -57,19 +57,21 @@ class FalProvider:
             except OSError:
                 pass
 
-    def extend(
+    def extend_margins(
         self,
         image: bytes,
-        directions: list[Direction],
-        amount_px: int,
-        prompt: str,
         *,
+        left: int,
+        top: int,
+        right: int,
+        bottom: int,
+        prompt: str,
         image_format: str = "png",
     ) -> bytes:
-        left, top, right, bottom = _directions_to_expand(directions, amount_px)
         if left == top == right == bottom == 0:
             return image
         import fal_client
+
         image_url = self._upload_image(image)
         inp = {
             "image_url": image_url,
@@ -87,6 +89,28 @@ class FalProvider:
         if not url:
             raise RuntimeError("Fal outpaint image had no url")
         return _download_url(url)
+
+    def extend(
+        self,
+        image: bytes,
+        directions: list[Direction],
+        amount_px: int,
+        prompt: str,
+        *,
+        image_format: str = "png",
+    ) -> bytes:
+        left, top, right, bottom = _directions_to_expand(directions, amount_px)
+        if left == top == right == bottom == 0:
+            return image
+        return self.extend_margins(
+            image,
+            left=left,
+            top=top,
+            right=right,
+            bottom=bottom,
+            prompt=prompt,
+            image_format=image_format,
+        )
 
     def manipulate(
         self,

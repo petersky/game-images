@@ -1,6 +1,6 @@
 # Game Images
 
-Create and edit game images: **create** (text-to-image), **adjust**, **tile**, **texture maps**, plus AI **extend** (outpaint) and **manipulate** (inpaint) with OpenAI, Gemini (Nano Banana), MiniMax, and Fal.ai providers.
+Create and edit game images: **create** (text-to-image), **adjust**, **tile**, **texture maps**, plus AI **zoom**, **extend** (outpaint), and **manipulate** (inpaint) with OpenAI, Gemini (Nano Banana), MiniMax, and Fal.ai providers.
 
 ## Setup
 
@@ -65,13 +65,20 @@ game-images tile tuned.png --mode offset_x -o tiled.png
 game-images maps tuned.png --type bump -o asphalt.bump.png
 ```
 
+**Zoom** — zoom out (uniform outpaint on all sides) or zoom in (crop + optional AI enhance):
+
+```bash
+game-images zoom image.png --mode out --factor 1.5 --prompt "Continue forest and sky" --provider openai -o wider.png
+game-images zoom image.png --mode in --factor 2 --enhance --prompt "Sharper pixel art, same style" -o tight.png
+```
+
 **Extend** (outpainting) — grow the image in one or more directions:
 
 ```bash
 game-images extend image.png --direction north --amount 256 --prompt "Seamless sky" --provider openai -o out.png
 ```
 
-Directions: `north`, `south`, `east`, `west` (comma-separated for multiple).
+Directions: `north`, `south`, `east`, `west`, or `all` (comma-separated for multiple). Use 128–256 px per step for cleaner borders.
 
 **Manipulate** (inpainting) — edit the image (or a masked region) with a prompt:
 
@@ -93,13 +100,15 @@ Run the local web interface:
 game-images serve
 ```
 
-Then open http://127.0.0.1:8000 . Use the **gear icon** (top right) to set API keys and run **Discover models** before Create / Extend / Manipulate.
+Then open http://127.0.0.1:8000 . Use the **gear icon** (top right) to set API keys and run **Discover models** before Create / Zoom / Extend / Manipulate.
 
 **Library → Edit → Create** flow:
 
 1. **Library** — browse, import, and click a thumbnail to set the **active image** (shown in the bar below the top toolbar).
-2. **Edit** — run local tools (Adjust, Tile, Maps), **Prepare** (shift before extend), or AI tools (Extend, Manipulate) on that image. Preview stays visible on the right.
+2. **Edit** — local tools (Adjust, Tile, Maps), **Prepare** (shift before extend), or AI tools (**Zoom**, Extend, Manipulate). **Game asset workflows** at the top of Edit lists guided step sequences (tileable texture, environment, sprite, shift-then-fill).
 3. **Create** — text-to-image without an existing source; the result becomes the active image. Open **Edit** to refine it.
+
+**Zoom** — zoom out uses uniform outpaint (same idea as Extend on all sides). Zoom in crops using the dashed Preview box; optional **Enhance** runs inpaint on the crop without a mask.
 
 Results from Create and Edit are saved to the library automatically.
 

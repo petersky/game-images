@@ -7,6 +7,7 @@ from PIL import Image
 
 from game_images.create import create_image as _create_image
 from game_images.image_ops import adjust_image as _adjust_image
+from game_images.image_ops import crop_image as _crop_image
 from game_images.image_ops import tile_image as _tile_image
 from game_images.providers.base import Direction, Provider
 from game_images.providers.fal_provider import FalProvider
@@ -94,6 +95,128 @@ def extend_image(
         amount_px,
         prompt,
         image_format=image_format,
+    )
+
+
+def extend_image_margins(
+    image: bytes,
+    *,
+    left: int,
+    top: int,
+    right: int,
+    bottom: int,
+    prompt: str,
+    provider_name: ProviderName = "openai",
+    image_format: str = "png",
+    model: str | None = None,
+) -> bytes:
+    """Extend with explicit per-side pixel margins (uniform zoom-out uses equal margins)."""
+    if provider_name == "gemini":
+        from game_images.gemini_edit import extend_image_gemini_margins
+
+        return extend_image_gemini_margins(
+            image,
+            left=left,
+            top=top,
+            right=right,
+            bottom=bottom,
+            prompt=prompt,
+            model=model,
+        )
+    if provider_name == "minimax":
+        raise ValueError(
+            "MiniMax does not support Extend. Choose OpenAI, Gemini, or Fal."
+        )
+    provider = get_provider(provider_name, model=model)  # type: ignore[arg-type]
+    return provider.extend_margins(
+        image,
+        left=left,
+        top=top,
+        right=right,
+        bottom=bottom,
+        prompt=prompt,
+        image_format=image_format,
+    )
+
+
+ZoomMode = Literal["in", "out"]
+_MAX_ZOOM_MARGIN = 700
+
+
+def _zoom_out_margins(width: int, height: int, factor: float) -> tuple[int, int, int, int]:
+    if factor <= 1.0:
+        raise ValueError("zoom out factor must be greater than 1 (e.g. 1.25 = 25% larger canvas)")
+    left = int(round(width * (factor - 1) / 2))
+    top = int(round(height * (factor - 1) / 2))
+    right = left
+    bottom = top
+    return (
+        min(_MAX_ZOOM_MARGIN, left),
+        min(_MAX_ZOOM_MARGIN, top),
+        min(_MAX_ZOOM_MARGIN, right),
+        min(_MAX_ZOOM_MARGIN, bottom),
+    )
+
+
+def zoom_image(
+    image: bytes,
+    mode: ZoomMode,
+    *,
+    factor: float = 1.5,
+    center_x: float = 0.5,
+    center_y: float = 0.5,
+    enhance: bool = False,
+    prompt: str = "",
+    provider_name: ProviderName = "openai",
+    image_format: str = "png",
+    model: str | None = None,
+) -> bytes:
+    """Zoom out (outpaint) or zoom in (crop, optional AI enhance)."""
+    img = Image.open(io.BytesIO(image))
+    w, h = img.size
+
+    if mode == "out":
+        left, top, right, bottom = _zoom_out_margins(w, h, factor)
+        if left == top == right == bottom == 0:
+            return image
+        out_prompt = (
+            prompt.strip()
+            or "Seamlessly continue the scene in all directions. Match style, lighting, and perspective."
+        )
+        return extend_image_margins(
+            image,
+            left=left,
+            top=top,
+            right=right,
+            bottom=bottom,
+            prompt=out_prompt,
+            provider_name=provider_name,
+            image_format=image_format,
+            model=model,
+        )
+
+    if factor <= 1.0:
+        raise ValueError("zoom in factor must be greater than 1 (e.g. 2 = keep center 50% of frame)")
+    crop_w = max(1, int(round(w / factor)))
+    crop_h = max(1, int(round(h / factor)))
+    cx = max(0.0, min(1.0, center_x))
+    cy = max(0.0, min(1.0, center_y))
+    center_px = int(round(cx * w))
+    center_py = int(round(cy * h))
+    left = max(0, min(w - crop_w, center_px - crop_w // 2))
+    top = max(0, min(h - crop_h, center_py - crop_h // 2))
+    cropped = _crop_image(image, left=left, top=top, width=crop_w, height=crop_h)
+    if not enhance:
+        return cropped
+    enhance_prompt = prompt.strip() or (
+        "Enhance detail and clarity while keeping the same composition, style, colors, and subject."
+    )
+    return manipulate_image(
+        cropped,
+        enhance_prompt,
+        provider_name=provider_name,
+        image_format=image_format,
+        model=model,
     )
 
 

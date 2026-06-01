@@ -477,6 +477,43 @@
     .editToolPane { display: none; }
     .editToolPane.active { display: block; }
     .editToolPane section { max-width: 640px; }
+    .gameWorkflows {
+      margin-bottom: 1rem;
+      max-width: 640px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.65rem 0.85rem;
+      background: rgba(0, 0, 0, 0.15);
+    }
+    .gameWorkflows summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+    .workflowCard {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.6rem 0.75rem;
+      margin-top: 0.5rem;
+      background: var(--surface);
+    }
+    .workflowCard h4 { margin: 0 0 0.35rem 0; font-size: 0.9rem; }
+    .workflowCard ol { margin: 0.2rem 0 0.45rem 1.15rem; padding: 0; font-size: 0.8125rem; color: var(--muted); }
+    .workflowCard .workflowActions { margin-top: 0.35rem; }
+    .workflowCard .workflowActions button { font-size: 0.8rem; padding: 0.25rem 0.55rem; margin: 0.2rem 0.35rem 0 0; }
+    .previewCropOverlay {
+      position: absolute;
+      left: 0;
+      top: 0;
+      border: 2px dashed var(--accent);
+      pointer-events: none;
+      box-sizing: border-box;
+      display: none;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+    }
+    .tipBox {
+      font-size: 0.875rem;
+      color: var(--muted);
+      border-left: 3px solid var(--accent);
+      padding: 0.35rem 0 0.35rem 0.65rem;
+      margin: 0.5rem 0 0.75rem 0;
+    }
     .sidebarItem:disabled { opacity: 0.45; cursor: not-allowed; }
     @media (max-width: 767px) {
       .activeImageBar { position: sticky; top: 0; z-index: 40; }
@@ -589,11 +626,71 @@
             </div>
 
             <div id="areaEdit" class="workspacePane">
+              <details class="gameWorkflows">
+                <summary>Game asset workflows (guided steps)</summary>
+                <p class="helpText" style="margin: 0.5rem 0 0;">Click a step to open the right tool. Run each step when ready; the active image updates as you go.</p>
+                <div class="workflowCard" data-workflow="tileable">
+                  <h4>Tileable texture</h4>
+                  <ol>
+                    <li>Create a seamless-friendly albedo</li>
+                    <li>Tile → offset seam to center</li>
+                    <li>Manipulate → mask &amp; fix center blend</li>
+                    <li>Maps → normal / roughness</li>
+                  </ol>
+                  <div class="workflowActions">
+                    <button type="button" class="secondary wf-step" data-area="create" data-tool="create">1 Create</button>
+                    <button type="button" class="secondary wf-step" data-area="edit" data-tool="tile">2 Tile</button>
+                    <button type="button" class="secondary wf-step" data-area="edit" data-tool="manipulate">3 Manipulate</button>
+                    <button type="button" class="secondary wf-step" data-area="edit" data-tool="maps">4 Maps</button>
+                  </div>
+                </div>
+                <div class="workflowCard" data-workflow="environment">
+                  <h4>Wider environment / backdrop</h4>
+                  <ol>
+                    <li>Zoom out for more scene around the subject</li>
+                    <li>Extend one side if you need asymmetric fill</li>
+                    <li>Tile mirror to check continuity (optional)</li>
+                  </ol>
+                  <div class="workflowActions">
+                    <button type="button" class="secondary wf-step" data-area="edit" data-tool="zoom">1 Zoom</button>
+                    <button type="button" class="secondary wf-step" data-area="edit" data-tool="extend">2 Extend</button>
+                    <button type="button" class="secondary wf-step" data-area="edit" data-tool="tile">3 Tile</button>
+                  </div>
+                </div>
+                <div class="workflowCard" data-workflow="sprite">
+                  <h4>Sprite / icon focus</h4>
+                  <ol>
+                    <li>Zoom in on the subject</li>
+                    <li>Manipulate small fixes with a tight mask</li>
+                    <li>Adjust size for target resolution</li>
+                  </ol>
+                  <div class="workflowActions">
+                    <button type="button" class="secondary wf-step" data-area="edit" data-tool="zoom">1 Zoom</button>
+                    <button type="button" class="secondary wf-step" data-area="edit" data-tool="manipulate">2 Manipulate</button>
+                    <button type="button" class="secondary wf-step" data-area="edit" data-tool="adjust">3 Adjust</button>
+                  </div>
+                </div>
+                <div class="workflowCard" data-workflow="shift-fill">
+                  <h4>Shift then fill (panorama strip)</h4>
+                  <ol>
+                    <li>Prepare → shift to expose blank edge</li>
+                    <li>Extend → fill the blank region</li>
+                    <li>Repeat or Zoom out for uniform growth</li>
+                  </ol>
+                  <div class="workflowActions">
+                    <button type="button" class="secondary wf-step" data-area="edit" data-tool="prepare">1 Prepare</button>
+                    <button type="button" class="secondary wf-step" data-area="edit" data-tool="extend">2 Extend</button>
+                    <button type="button" class="secondary wf-step" data-area="edit" data-tool="zoom">3 Zoom</button>
+                  </div>
+                </div>
+              </details>
+
               <nav class="editToolTabs" aria-label="Edit tools">
                 <button type="button" class="editToolTab active" data-tool="adjust">Adjust</button>
                 <button type="button" class="editToolTab" data-tool="tile">Tile</button>
                 <button type="button" class="editToolTab" data-tool="maps">Maps</button>
                 <button type="button" class="editToolTab" data-tool="prepare">Prepare</button>
+                <button type="button" class="editToolTab" data-tool="zoom">Zoom</button>
                 <button type="button" class="editToolTab" data-tool="extend">Extend</button>
                 <button type="button" class="editToolTab" data-tool="manipulate">Manipulate</button>
               </nav>
@@ -700,11 +797,55 @@
                 <p id="errorPrepare" class="error" style="display: none;"></p>
               </div>
 
+              <div id="editToolZoom" class="editToolPane" data-tool="zoom">
+                <section class="formSection">
+                  <h2 class="areaTitle">Zoom</h2>
+                  <p class="helpText">Zoom <strong>out</strong> adds canvas around the image (AI outpaint). Zoom <strong>in</strong> crops a tighter frame; optionally enhance with AI.</p>
+                  <label for="zoomMode">Mode</label>
+                  <select id="zoomMode">
+                    <option value="out">Zoom out — reveal more scene</option>
+                    <option value="in">Zoom in — crop tighter</option>
+                  </select>
+                  <p id="zoomModeHint" class="tipBox">Outpaint: describe what should appear in the new border areas. Try 1.25×–1.5× per step for best coherence.</p>
+                  <label>Zoom amount <span id="zoomFactorVal">1.5×</span></label>
+                  <input type="range" id="zoomFactor" min="1.1" max="3" step="0.05" value="1.5" />
+                  <div id="zoomInOptions" style="display: none;">
+                    <label>Focus horizontal <span id="zoomCenterXVal">50%</span></label>
+                    <input type="range" id="zoomCenterX" min="0" max="100" value="50" />
+                    <label>Focus vertical <span id="zoomCenterYVal">50%</span></label>
+                    <input type="range" id="zoomCenterY" min="0" max="100" value="50" />
+                    <p class="helpText">Dashed box in Preview shows the crop region.</p>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                      <input type="checkbox" id="zoomEnhance" />
+                      <span>Enhance cropped result with AI (inpaint-style, no mask)</span>
+                    </label>
+                  </div>
+                  <label for="zoomPrompt">Prompt</label>
+                  <input type="text" id="zoomPrompt" placeholder="Zoom out: continue forest and sky… / Zoom in enhance: sharper detail, same style" />
+                  <div id="zoomProviderBlock">
+                    <label>Provider</label>
+                    <select id="providerZoom">
+                      <option value="openai">OpenAI</option>
+                      <option value="gemini">Gemini (Nano Banana)</option>
+                      <option value="minimax">MiniMax</option>
+                      <option value="fal">Fal (Flux)</option>
+                    </select>
+                    <div id="modelRowZoom">
+                      <label for="modelZoom" id="modelZoomLabel">Model</label>
+                      <select id="modelZoom"></select>
+                    </div>
+                  </div>
+                </section>
+                <p id="errorZoom" class="error" style="display: none;"></p>
+              </div>
+
               <div id="editToolExtend" class="editToolPane" data-tool="extend">
                 <section class="formSection">
                   <h2 class="areaTitle">Extend (outpaint)</h2>
+                  <p class="tipBox">Adds pixels on chosen sides. The API gets a larger canvas + mask (transparent = new areas). Prompt what should appear in the <em>new</em> border — not only “extend”. Use 128–256 px per step for cleaner results.</p>
           <label>Direction(s)</label>
           <select name="direction" id="direction">
+            <option value="all">All sides (uniform)</option>
             <option value="north">North</option>
             <option value="south">South</option>
             <option value="east">East</option>
@@ -712,10 +853,10 @@
             <option value="north,south">North + South</option>
             <option value="east,west">East + West</option>
           </select>
-          <label>Amount (pixels)</label>
+          <label>Amount (pixels per side)</label>
           <input type="number" name="amount" id="amount" value="128" min="1" max="700" />
           <label>Prompt</label>
-          <input type="text" name="prompt" id="prompt" placeholder="e.g. Seamless sky and trees" />
+          <input type="text" name="prompt" id="prompt" placeholder="e.g. Continue the stone wall and moss; match lighting and style" />
           <label>Provider</label>
           <select name="provider" id="providerExtend">
             <option value="openai">OpenAI</option>
@@ -734,10 +875,12 @@
               <div id="editToolManipulate" class="editToolPane" data-tool="manipulate">
                 <section class="formSection">
                   <h2 class="areaTitle">Manipulate (inpaint)</h2>
+                  <p class="tipBox">Describe the <strong>whole final image</strong>, including what must stay the same. A mask is sent with Run (transparent = edit). Without a mask the model guesses the region — use a mask for game-art fixes.</p>
           <label>Prompt</label>
-          <input type="text" name="promptManipulate" id="promptManipulate" placeholder="e.g. Add a red hat" required />
-          <label>Mask (optional)</label>
-          <p class="helpText">Transparent = where to apply changes; opaque = keep unchanged.</p>
+          <input type="text" name="promptManipulate" id="promptManipulate" placeholder="e.g. Same pixel-art character; add a red hat; keep background unchanged" required />
+          <label>Mask (recommended)</label>
+          <p class="helpText">Transparent = where to apply changes; opaque = keep unchanged. Preview tint shows edit areas only — the API receives the real mask PNG.</p>
+          <p id="manipulateMaskWarn" class="helpText" style="display: none; color: #c9a227;">No mask set — Run will edit the whole image from the prompt only.</p>
           <div class="row">
             <button type="button" id="createMaskBtn">Create mask…</button>
             <input type="file" name="mask" id="maskInput" accept="image/png" style="width: auto;" />
@@ -772,6 +915,7 @@
             <div id="previewContent" style="display: none;">
               <div class="previewImageWrap">
                 <img id="previewImg" alt="Active image" />
+                <div id="previewCropOverlay" class="previewCropOverlay" aria-hidden="true"></div>
               </div>
               <dl class="previewMeta" id="previewMeta"></dl>
             </div>
@@ -1217,11 +1361,25 @@
       syncModelRow('providerManipulate', 'modelManipulate', 'modelRowManipulate', 'modelManipulateLabel', 'manipulate');
     }
 
+    function syncZoomModelRow() {
+      const mode = document.getElementById('zoomMode').value;
+      const cap = mode === 'in' && document.getElementById('zoomEnhance').checked ? 'manipulate' : 'extend';
+      syncProviderOptions('providerZoom', cap);
+      syncModelRow('providerZoom', 'modelZoom', 'modelRowZoom', 'modelZoomLabel', cap);
+      const block = document.getElementById('zoomProviderBlock');
+      const zoomIn = mode === 'in';
+      const enhance = document.getElementById('zoomEnhance').checked;
+      if (block) {
+        block.style.display = (!zoomIn || enhance) ? 'block' : 'none';
+      }
+    }
+
     function applyModelCatalogToUI() {
       syncCreateProviderOptions();
       syncCreateModelRow();
       syncExtendModelRow();
       syncManipulateModelRow();
+      syncZoomModelRow();
     }
 
     function appendModelToFormData(formData, provider, modelSelectId) {
@@ -1280,6 +1438,29 @@
     document.getElementById('providerCreate').addEventListener('change', syncCreateModelRow);
     document.getElementById('providerExtend').addEventListener('change', syncExtendModelRow);
     document.getElementById('providerManipulate').addEventListener('change', syncManipulateModelRow);
+    document.getElementById('providerZoom').addEventListener('change', syncZoomModelRow);
+    document.getElementById('zoomMode').addEventListener('change', function() {
+      syncZoomModeUI();
+      syncZoomModelRow();
+      updateZoomCropOverlay();
+      updateRunButton();
+    });
+    document.getElementById('zoomEnhance').addEventListener('change', function() {
+      syncZoomModelRow();
+      updateRunButton();
+    });
+    document.getElementById('zoomFactor').addEventListener('input', function() {
+      document.getElementById('zoomFactorVal').textContent = parseFloat(this.value).toFixed(2) + '×';
+      updateZoomCropOverlay();
+    });
+    document.getElementById('zoomCenterX').addEventListener('input', function() {
+      document.getElementById('zoomCenterXVal').textContent = this.value + '%';
+      updateZoomCropOverlay();
+    });
+    document.getElementById('zoomCenterY').addEventListener('input', function() {
+      document.getElementById('zoomCenterYVal').textContent = this.value + '%';
+      updateZoomCropOverlay();
+    });
     loadModelCatalog();
 
     (function initSettings() {
@@ -1877,6 +2058,83 @@
       previewMeta.appendChild(dd);
     }
 
+    function isMaskEditPixel(r, g, b, a) {
+      if (a < 128) return true;
+      if (a >= 200 && r > 200 && g > 200 && b > 200) return true;
+      return false;
+    }
+
+    function loadImageFromBlob(blob) {
+      return new Promise(function(resolve, reject) {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = function() {
+          URL.revokeObjectURL(url);
+          resolve(img);
+        };
+        img.onerror = function() {
+          URL.revokeObjectURL(url);
+          reject(new Error('Could not load image'));
+        };
+        img.src = url;
+      });
+    }
+
+    async function composePreviewWithMask(baseBlob, maskBlob) {
+      const baseImg = await loadImageFromBlob(baseBlob);
+      const maskImg = await loadImageFromBlob(maskBlob);
+      const w = baseImg.naturalWidth;
+      const h = baseImg.naturalHeight;
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(baseImg, 0, 0);
+
+      const mCanvas = document.createElement('canvas');
+      mCanvas.width = w;
+      mCanvas.height = h;
+      const mCtx = mCanvas.getContext('2d');
+      mCtx.drawImage(maskImg, 0, 0, w, h);
+      const maskData = mCtx.getImageData(0, 0, w, h);
+      const out = ctx.getImageData(0, 0, w, h);
+
+      for (let i = 0; i < maskData.data.length; i += 4) {
+        const r = maskData.data[i];
+        const g = maskData.data[i + 1];
+        const b = maskData.data[i + 2];
+        const a = maskData.data[i + 3];
+        if (isMaskEditPixel(r, g, b, a)) {
+          out.data[i] = Math.round(out.data[i] * 0.45 + 122 * 0.55);
+          out.data[i + 1] = Math.round(out.data[i + 1] * 0.45 + 162 * 0.55);
+          out.data[i + 2] = Math.round(out.data[i + 2] * 0.45 + 247 * 0.55);
+        }
+      }
+      ctx.putImageData(out, 0, 0);
+
+      return new Promise(function(resolve, reject) {
+        canvas.toBlob(function(b) {
+          if (b) resolve(b);
+          else reject(new Error('Could not build mask preview'));
+        }, 'image/png');
+      });
+    }
+
+    async function updateManipulatePreview() {
+      if (!workingImageBlob) return;
+      if (!maskBlob) {
+        showPreviewFromBlob(workingImageBlob, activeImageLabel || 'Active image');
+        return;
+      }
+      try {
+        const composite = await composePreviewWithMask(workingImageBlob, maskBlob);
+        showPreviewFromBlob(composite, activeImageLabel || 'Active image');
+        addMetaRow('Mask', 'Blue tint = areas to edit (transparent in mask file)');
+      } catch (err) {
+        showPreviewFromBlob(workingImageBlob, activeImageLabel || 'Active image');
+      }
+    }
+
     async function refreshLibraryGrid() {
       try {
         const r = await apiFetch('/library?type=image,result');
@@ -1954,10 +2212,34 @@
       tile: 'errorTile',
       maps: 'errorMaps',
       prepare: 'errorPrepare',
+      zoom: 'errorZoom',
       extend: 'errorExtend',
       manipulate: 'errorManipulate',
     };
-    const runnableEditTools = ['adjust', 'tile', 'maps', 'extend', 'manipulate'];
+    const runnableEditTools = ['adjust', 'tile', 'maps', 'zoom', 'extend', 'manipulate'];
+    const WORKFLOW_TIPS = {
+      tileable: {
+        create: 'Workflow: Create a seamless-friendly base texture (e.g. stone, grass).',
+        tile: 'Workflow: Offset X or Y to move the seam to the center.',
+        manipulate: 'Workflow: Mask the center band and inpaint to hide the seam.',
+        maps: 'Workflow: Generate normal or roughness from your final albedo.',
+      },
+      environment: {
+        zoom: 'Workflow: Zoom out to add environment around the subject.',
+        extend: 'Workflow: Extend one side if you need asymmetric fill.',
+        tile: 'Workflow: Mirror or 2×2 preview to check continuity.',
+      },
+      sprite: {
+        zoom: 'Workflow: Zoom in on the character or icon.',
+        manipulate: 'Workflow: Tight mask for small fixes only.',
+        adjust: 'Workflow: Resize to your target sprite resolution.',
+      },
+      'shift-fill': {
+        prepare: 'Workflow: Shift to expose a blank edge.',
+        extend: 'Workflow: Extend to fill the blank region.',
+        zoom: 'Workflow: Optional uniform zoom out for more canvas.',
+      },
+    };
     function getOperationArea() {
       if (mainArea === 'edit') return editTool;
       if (mainArea === 'create') return 'create';
@@ -1993,10 +2275,77 @@
       if (editTool === 'manipulate') {
         const p = document.getElementById('promptManipulate').value.trim();
         topBarRunBtn.disabled = !workingImageBlob || !p;
+        updateManipulateMaskWarn();
+        return;
+      }
+      if (editTool === 'zoom') {
+        const zIn = document.getElementById('zoomMode').value === 'in';
+        const enhance = document.getElementById('zoomEnhance').checked;
+        if (zIn && enhance) {
+          topBarRunBtn.disabled = !workingImageBlob;
+        } else {
+          topBarRunBtn.disabled = !workingImageBlob;
+        }
         return;
       }
       topBarRunBtn.disabled = !workingImageBlob;
     }
+
+    function updateManipulateMaskWarn() {
+      const el = document.getElementById('manipulateMaskWarn');
+      if (!el) return;
+      const show = editTool === 'manipulate' && workingImageBlob && !maskBlob &&
+        !(document.getElementById('maskInput').files && document.getElementById('maskInput').files[0]);
+      el.style.display = show ? 'block' : 'none';
+    }
+
+    function syncZoomModeUI() {
+      const mode = document.getElementById('zoomMode').value;
+      const hint = document.getElementById('zoomModeHint');
+      const inOpts = document.getElementById('zoomInOptions');
+      if (mode === 'in') {
+        inOpts.style.display = 'block';
+        hint.textContent = 'Crop keeps the region in Preview (dashed box). Enable Enhance to sharpen via AI (whole cropped frame).';
+      } else {
+        inOpts.style.display = 'none';
+        hint.textContent = 'Outpaint adds canvas on all sides. Describe border content; try 1.25×–1.5× per step.';
+      }
+    }
+
+    function updateZoomCropOverlay() {
+      const overlay = document.getElementById('previewCropOverlay');
+      const wrap = document.querySelector('.previewImageWrap');
+      if (!overlay || !wrap || editTool !== 'zoom' || document.getElementById('zoomMode').value !== 'in') {
+        if (overlay) overlay.style.display = 'none';
+        return;
+      }
+      const img = previewImg;
+      if (!img.naturalWidth || !img.naturalHeight) {
+        overlay.style.display = 'none';
+        return;
+      }
+      const factor = parseFloat(document.getElementById('zoomFactor').value) || 1.5;
+      const cx = parseInt(document.getElementById('zoomCenterX').value, 10) / 100;
+      const cy = parseInt(document.getElementById('zoomCenterY').value, 10) / 100;
+      const iw = img.naturalWidth;
+      const ih = img.naturalHeight;
+      const cropW = Math.max(1, Math.round(iw / factor));
+      const cropH = Math.max(1, Math.round(ih / factor));
+      const centerPx = Math.round(cx * iw);
+      const centerPy = Math.round(cy * ih);
+      const left = Math.max(0, Math.min(iw - cropW, centerPx - Math.floor(cropW / 2)));
+      const top = Math.max(0, Math.min(ih - cropH, centerPy - Math.floor(cropH / 2)));
+      const rect = img.getBoundingClientRect();
+      const wrapRect = wrap.getBoundingClientRect();
+      const scaleX = rect.width / iw;
+      const scaleY = rect.height / ih;
+      overlay.style.display = 'block';
+      overlay.style.left = (rect.left - wrapRect.left + left * scaleX) + 'px';
+      overlay.style.top = (rect.top - wrapRect.top + top * scaleY) + 'px';
+      overlay.style.width = (cropW * scaleX) + 'px';
+      overlay.style.height = (cropH * scaleY) + 'px';
+    }
+
     function switchEditTool(tool) {
       if (!workingImageBlob) {
         setStatus('Select an image in Library or create one.', false);
@@ -2009,6 +2358,19 @@
       document.querySelectorAll('.editToolPane').forEach(function(p) {
         p.classList.toggle('active', p.dataset.tool === tool);
       });
+      if (tool === 'manipulate') {
+        updateManipulatePreview();
+      } else if (maskBlob) {
+        showPreviewFromBlob(workingImageBlob, activeImageLabel || 'Active image');
+      }
+      if (tool === 'zoom') {
+        syncZoomModeUI();
+        syncZoomModelRow();
+        updateZoomCropOverlay();
+      } else {
+        updateZoomCropOverlay();
+      }
+      updateManipulateMaskWarn();
       updateRunButton();
       updateAreaStatus();
     }
@@ -2179,9 +2541,12 @@
       let maskCanvasOff = null;
       let tool = 'rect';
       let rectStart = null;
-      let brushPoints = [];
-      let editRects = [];
+      let brushPainting = false;
+      let lastBrushStamp = null;
+      let overlayScratch = null;
       let sourceImg = null;
+
+      const OVERLAY_TINT = 'rgba(122, 162, 247, 0.4)';
 
       function displayToImage(clientX, clientY) {
         const r = canvas.getBoundingClientRect();
@@ -2212,26 +2577,58 @@
         maskCtx = maskCanvasOff.getContext('2d');
         maskCtx.fillStyle = 'black';
         maskCtx.fillRect(0, 0, imgW, imgH);
+        initOverlayScratch();
+        lastBrushStamp = null;
         redrawOverlay();
+      }
+
+      function initOverlayScratch() {
+        overlayScratch = document.createElement('canvas');
+        overlayScratch.width = imgW;
+        overlayScratch.height = imgH;
+        const sctx = overlayScratch.getContext('2d');
+        sctx.clearRect(0, 0, imgW, imgH);
+      }
+
+      function markEditRectOnOverlay(x, y, w, h) {
+        if (!overlayScratch) return;
+        const sctx = overlayScratch.getContext('2d');
+        sctx.fillStyle = OVERLAY_TINT;
+        sctx.fillRect(x, y, w, h);
+      }
+
+      function markBrushOnOverlay(ix, iy, radius) {
+        if (!overlayScratch) return;
+        const sctx = overlayScratch.getContext('2d');
+        sctx.fillStyle = OVERLAY_TINT;
+        sctx.beginPath();
+        sctx.arc(ix, iy, radius, 0, Math.PI * 2);
+        sctx.fill();
+      }
+
+      function rebuildOverlayScratchFromMask() {
+        if (!overlayScratch || !maskCtx) return;
+        const sctx = overlayScratch.getContext('2d');
+        sctx.clearRect(0, 0, imgW, imgH);
+        const imgData = maskCtx.getImageData(0, 0, imgW, imgH);
+        const snapData = sctx.createImageData(imgW, imgH);
+        for (let i = 0; i < imgData.data.length; i += 4) {
+          if (isMaskEditPixel(imgData.data[i], imgData.data[i + 1], imgData.data[i + 2], imgData.data[i + 3])) {
+            snapData.data[i] = 122;
+            snapData.data[i + 1] = 162;
+            snapData.data[i + 2] = 247;
+            snapData.data[i + 3] = 102;
+          }
+        }
+        sctx.putImageData(snapData, 0, 0);
       }
 
       function redrawOverlay() {
         const ctx = overlay.getContext('2d');
         ctx.clearRect(0, 0, overlay.width, overlay.height);
-        ctx.fillStyle = 'rgba(122, 162, 247, 0.4)';
-        const ix = (x) => Math.round(x * scale);
-        const iw = (w) => Math.max(1, Math.round(w * scale));
-        editRects.forEach(function(r) {
-          ctx.fillRect(ix(r.x), ix(r.y), iw(r.w), iw(r.h));
-        });
-        brushPoints.forEach(function(stroke) {
-          const rad = Math.max(1, Math.round(stroke.radius * scale));
-          stroke.points.forEach(function(p) {
-            ctx.beginPath();
-            ctx.arc(ix(p.x), ix(p.y), rad, 0, Math.PI * 2);
-            ctx.fill();
-          });
-        });
+        if (overlayScratch) {
+          ctx.drawImage(overlayScratch, 0, 0, overlay.width, overlay.height);
+        }
       }
 
       function applyRectToMask(ix, iy, iw, ih) {
@@ -2240,18 +2637,63 @@
         const w = Math.max(1, Math.min(iw, imgW - x));
         const h = Math.max(1, Math.min(ih, imgH - y));
         maskCtx.clearRect(x, y, w, h);
-        editRects.push({ x, y, w, h });
+        markEditRectOnOverlay(x, y, w, h);
         redrawOverlay();
       }
 
       function applyBrushToMask(ix, iy, radius) {
         const r = Math.max(2, Math.min(radius, Math.min(imgW, imgH) / 2));
-        maskCtx.clearRect(ix - r, iy - r, r * 2, r * 2);
-        if (!brushPoints.length || brushPoints[brushPoints.length - 1].radius !== r) {
-          brushPoints.push({ points: [], radius: r });
+        let lastX = null;
+        let lastY = null;
+
+        function stamp(px, py) {
+          maskCtx.clearRect(px - r, py - r, r * 2, r * 2);
+          markBrushOnOverlay(px, py, r);
         }
-        brushPoints[brushPoints.length - 1].points.push({ x: ix, y: iy });
+
+        if (lastBrushStamp && lastBrushStamp.radius === r) {
+          lastX = lastBrushStamp.x;
+          lastY = lastBrushStamp.y;
+        }
+
+        if (lastX !== null) {
+          const dx = ix - lastX;
+          const dy = iy - lastY;
+          const dist = Math.hypot(dx, dy);
+          const step = Math.max(1, r * 0.5);
+          if (dist > step) {
+            for (let d = 0; d <= dist; d += step) {
+              const t = d / dist;
+              stamp(Math.round(lastX + dx * t), Math.round(lastY + dy * t));
+            }
+          } else if (lastX !== ix || lastY !== iy) {
+            stamp(ix, iy);
+          }
+        } else {
+          stamp(ix, iy);
+        }
+        lastBrushStamp = { x: ix, y: iy, radius: r };
         redrawOverlay();
+      }
+
+      function restoreMaskFromBlob(blob) {
+        const murl = URL.createObjectURL(blob);
+        const maskImg = new Image();
+        maskImg.onload = function() {
+          URL.revokeObjectURL(murl);
+          if (maskImg.naturalWidth !== imgW || maskImg.naturalHeight !== imgH) {
+            maskStatus.textContent = 'Mask set (dimensions differ — editor started fresh).';
+            return;
+          }
+          maskCtx.drawImage(maskImg, 0, 0, imgW, imgH);
+          rebuildOverlayScratchFromMask();
+          lastBrushStamp = null;
+          redrawOverlay();
+        };
+        maskImg.onerror = function() {
+          URL.revokeObjectURL(murl);
+        };
+        maskImg.src = murl;
       }
 
       function openEditor() {
@@ -2263,13 +2705,15 @@
           return;
         }
         errEl.style.display = 'none';
-        editRects = [];
-        brushPoints = [];
+        const existingMask = maskBlob;
         const url = URL.createObjectURL(src);
         sourceImg = new Image();
         sourceImg.onload = function() {
           URL.revokeObjectURL(url);
           drawImageOnCanvas();
+          if (existingMask) {
+            restoreMaskFromBlob(existingMask);
+          }
           modal.classList.add('visible');
         };
         sourceImg.onerror = function() {
@@ -2307,16 +2751,27 @@
           } catch (e) { /* ignore */ }
         }
         closeEditor();
+        if (editTool === 'manipulate' || mainArea === 'edit') {
+          await updateManipulatePreview();
+        }
+        updateManipulateMaskWarn();
+      }
+
+      function paintBrushAt(clientX, clientY) {
+        const [ix, iy] = displayToImage(clientX, clientY);
+        const r = parseInt(brushSizeInput.value, 10);
+        applyBrushToMask(ix, iy, r);
       }
 
       canvas.addEventListener('mousedown', function(e) {
+        if (e.button !== 0) return;
         if (tool === 'rect') {
           const [ix, iy] = displayToImage(e.clientX, e.clientY);
           rectStart = { x: ix, y: iy };
         } else if (tool === 'brush') {
-          const [ix, iy] = displayToImage(e.clientX, e.clientY);
-          const r = parseInt(brushSizeInput.value, 10);
-          applyBrushToMask(ix, iy, r);
+          brushPainting = true;
+          lastBrushStamp = null;
+          paintBrushAt(e.clientX, e.clientY);
         }
       });
       canvas.addEventListener('mousemove', function(e) {
@@ -2330,9 +2785,12 @@
           const ox = document.getElementById('maskEditorOverlay').getContext('2d');
           ox.fillStyle = 'rgba(122, 162, 247, 0.5)';
           ox.fillRect(Math.round(x * scale), Math.round(y * scale), Math.max(1, Math.round(w * scale)), Math.max(1, Math.round(h * scale)));
+        } else if (tool === 'brush' && brushPainting && (e.buttons & 1)) {
+          paintBrushAt(e.clientX, e.clientY);
         }
       });
       canvas.addEventListener('mouseup', function(e) {
+        if (e.button !== 0) return;
         if (tool === 'rect' && rectStart) {
           const [ix, iy] = displayToImage(e.clientX, e.clientY);
           const x = Math.min(rectStart.x, ix);
@@ -2342,8 +2800,18 @@
           applyRectToMask(x, y, w, h);
           rectStart = null;
         }
+        brushPainting = false;
+        lastBrushStamp = null;
       });
-      canvas.addEventListener('mouseleave', function() { rectStart = null; });
+      canvas.addEventListener('mouseleave', function() {
+        rectStart = null;
+        brushPainting = false;
+        lastBrushStamp = null;
+      });
+      window.addEventListener('mouseup', function() {
+        brushPainting = false;
+        lastBrushStamp = null;
+      });
 
       btnRect.addEventListener('click', function() { tool = 'rect'; btnRect.classList.add('active'); btnCoords.classList.remove('active'); btnBrush.classList.remove('active'); brushSizeWrap.style.display = 'none'; coordsWrap.style.display = 'none'; });
       btnCoords.addEventListener('click', function() { tool = 'coords'; btnCoords.classList.add('active'); btnRect.classList.remove('active'); btnBrush.classList.remove('active'); brushSizeWrap.style.display = 'none'; coordsWrap.style.display = 'flex'; if (imgW) { maskX.value = 0; maskY.value = 0; maskW.value = imgW; maskH.value = imgH; } });
@@ -2362,8 +2830,8 @@
       btnClear.addEventListener('click', function() {
         maskCtx.fillStyle = 'black';
         maskCtx.fillRect(0, 0, imgW, imgH);
-        editRects = [];
-        brushPoints = [];
+        initOverlayScratch();
+        lastBrushStamp = null;
         redrawOverlay();
       });
 
@@ -2372,7 +2840,13 @@
 
       maskLibrarySelect.addEventListener('change', async function() {
         const id = this.value;
-        if (!id) { maskBlob = null; selectedMaskLibraryId = null; maskStatus.textContent = ''; return; }
+        if (!id) {
+          maskBlob = null;
+          selectedMaskLibraryId = null;
+          maskStatus.textContent = '';
+          await updateManipulatePreview();
+          return;
+        }
         try {
           const r = await apiFetch('/library/' + id);
           if (!r.ok) throw new Error('Failed to load mask');
@@ -2380,19 +2854,24 @@
           selectedMaskLibraryId = id;
           maskInput.value = '';
           maskStatus.textContent = 'Mask: from library.';
+          await updateManipulatePreview();
+          updateManipulateMaskWarn();
         } catch (err) { maskStatus.textContent = 'Error: ' + err.message; }
       });
       document.getElementById('createMaskBtn').addEventListener('click', openEditor);
-      maskInput.addEventListener('change', function() {
+      maskInput.addEventListener('change', async function() {
         if (this.files && this.files[0]) {
           maskBlob = this.files[0];
           selectedMaskLibraryId = null;
           maskLibrarySelect.value = '';
           maskStatus.textContent = 'Mask: uploaded file.';
+          await updateManipulatePreview();
         } else {
           maskBlob = null;
           maskStatus.textContent = '';
+          await updateManipulatePreview();
         }
+        updateManipulateMaskWarn();
       });
     })();
 
@@ -2501,6 +2980,22 @@
           formData.append('map_type', document.getElementById('mapType').value);
           formData.append('strength', document.getElementById('mapStrength').value);
           promptForLibrary = 'map:' + document.getElementById('mapType').value;
+        } else if (op === 'zoom') {
+          endpoint = '/zoom';
+          const zMode = document.getElementById('zoomMode').value;
+          const zFactor = document.getElementById('zoomFactor').value;
+          const zPrompt = document.getElementById('zoomPrompt').value.trim();
+          promptForLibrary = 'zoom:' + zMode + ':' + zFactor;
+          formData.append('image', workingImageBlob, 'image.png');
+          formData.append('mode', zMode);
+          formData.append('factor', zFactor);
+          formData.append('center_x', (parseInt(document.getElementById('zoomCenterX').value, 10) / 100).toFixed(4));
+          formData.append('center_y', (parseInt(document.getElementById('zoomCenterY').value, 10) / 100).toFixed(4));
+          formData.append('enhance', document.getElementById('zoomEnhance').checked ? 'true' : 'false');
+          formData.append('prompt', zPrompt);
+          const zoomProvider = document.getElementById('providerZoom').value;
+          formData.append('provider', zoomProvider);
+          appendModelToFormData(formData, zoomProvider, 'modelZoom');
         } else if (op === 'extend') {
           endpoint = '/extend';
           promptForLibrary = document.getElementById('prompt').value || 'Seamlessly extend the image.';
@@ -2573,6 +3068,35 @@
     bindSlider('mapStrength', 'mapStrengthVal');
     document.getElementById('promptCreate').addEventListener('input', updateRunButton);
     document.getElementById('promptManipulate').addEventListener('input', updateRunButton);
+    document.querySelectorAll('.wf-step').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const area = btn.dataset.area;
+        const tool = btn.dataset.tool;
+        const card = btn.closest('[data-workflow]');
+        const wfId = card ? card.getAttribute('data-workflow') : '';
+        if (area === 'create') {
+          switchArea('create');
+        } else {
+          if (!workingImageBlob && area === 'edit') {
+            setStatus('Select an image in Library first.', false);
+            return;
+          }
+          switchArea('edit');
+          switchEditTool(tool);
+        }
+        const tips = WORKFLOW_TIPS[wfId];
+        if (tips && tips[tool]) {
+          setStatus(tips[tool], false);
+        }
+      });
+    });
+    previewImg.addEventListener('load', function() {
+      updateAdjustSizeHint();
+      updateZoomCropOverlay();
+    });
+    window.addEventListener('resize', updateZoomCropOverlay);
+    syncZoomModeUI();
+    document.getElementById('zoomFactorVal').textContent = '1.50×';
     topBarRunBtn.addEventListener('click', runOperation);
     updateRunButton();
     updateActiveImageBar();

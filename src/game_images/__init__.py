@@ -3,6 +3,7 @@
 __all__ = [
     "extend_image",
     "manipulate_image",
+    "zoom_image",
     "create_image",
     "adjust_image",
     "tile_image",
@@ -20,4 +21,5 @@ from game_images.core import (
     manipulate_image,
     shift_image,
     tile_image,
+    zoom_image,
 )

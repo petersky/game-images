@@ -30,12 +30,14 @@ def _extract_image_bytes(response, width: int, height: int) -> bytes:
     raise RuntimeError("Gemini returned no image in the response")
 
 
-def extend_image_gemini(
+def extend_image_gemini_margins(
     image: bytes,
-    directions: list[Direction],
-    amount_px: int,
-    prompt: str,
     *,
+    left: int,
+    top: int,
+    right: int,
+    bottom: int,
+    prompt: str,
     model: str | None = None,
     api_key: str | None = None,
 ) -> bytes:
@@ -48,7 +50,6 @@ def extend_image_gemini(
             "Gemini API key not set. Add it in Settings (gear icon) or set GEMINI_API_KEY."
         )
     model = (model or os.environ.get("GEMINI_IMAGE_MODEL") or "gemini-2.5-flash-image").strip()
-    left, top, right, bottom = _directions_to_expand(directions, amount_px)
     if left == top == right == bottom == 0:
         return image
 
@@ -79,6 +80,28 @@ def extend_image_gemini(
         ),
     )
     return _extract_image_bytes(response, w, h)
+
+
+def extend_image_gemini(
+    image: bytes,
+    directions: list[Direction],
+    amount_px: int,
+    prompt: str,
+    *,
+    model: str | None = None,
+    api_key: str | None = None,
+) -> bytes:
+    left, top, right, bottom = _directions_to_expand(directions, amount_px)
+    return extend_image_gemini_margins(
+        image,
+        left=left,
+        top=top,
+        right=right,
+        bottom=bottom,
+        prompt=prompt,
+        model=model,
+        api_key=api_key,
+    )
 
 
 def manipulate_image_gemini(

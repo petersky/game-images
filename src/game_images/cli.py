@@ -12,6 +12,7 @@ from game_images.core import (
     manipulate_image,
     shift_image,
     tile_image,
+    zoom_image,
 )
 from game_images.providers.base import Direction
 
@@ -21,12 +22,16 @@ app = typer.Typer(
 
 
 def _parse_directions(s: str) -> list[Direction]:
-    allowed = {"north", "south", "east", "west"}
+    allowed = {"north", "south", "east", "west", "all"}
     parts = [p.strip().lower() for p in s.split(",") if p.strip()]
+    if len(parts) == 1 and parts[0] == "all":
+        return ["north", "south", "east", "west"]
     for p in parts:
         if p not in allowed:
-            raise typer.BadParameter(f"Direction must be one or more of: north, south, east, west (comma-separated). Got: {p}")
-    return list(parts)
+            raise typer.BadParameter(
+                "Direction must be north, south, east, west, all, or comma-separated. Got: " + p
+            )
+    return [p for p in parts if p != "all"] or ["north"]
 
 
 @app.command("create")
@@ -217,6 +222,57 @@ def extend(
             amount,
             prompt_text,
             provider_name=provider.lower(),
+        )
+    except ValueError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_bytes(result)
+    typer.echo(f"Wrote {output}")
+
+
+@app.command()
+def zoom(
+    image: Path = typer.Argument(..., help="Path to the base image.", path_type=Path, exists=True),
+    mode: str = typer.Option(
+        "out",
+        "--mode",
+        help="out = zoom out (outpaint all sides); in = crop tighter (optional AI enhance).",
+    ),
+    factor: float = typer.Option(
+        1.5,
+        "--factor",
+        "-f",
+        help="Zoom factor (>1). Out: canvas scale; in: crop 1/factor of width/height.",
+        min=1.05,
+        max=4.0,
+    ),
+    center_x: float = typer.Option(0.5, "--center-x", help="Crop focus X (0–1) for zoom in."),
+    center_y: float = typer.Option(0.5, "--center-y", help="Crop focus Y (0–1) for zoom in."),
+    enhance: bool = typer.Option(
+        False,
+        "--enhance",
+        help="After zoom-in crop, run AI enhance on the cropped image.",
+    ),
+    prompt: str = typer.Option("", "--prompt", "-p", help="Prompt for outpaint or enhance."),
+    provider: str = typer.Option("openai", "--provider", help="AI provider: openai, gemini, or fal."),
+    output: Path = typer.Option(..., "--output", "-o", path_type=Path, help="Output image path."),
+) -> None:
+    """Zoom out (uniform outpaint) or zoom in (crop, optional enhance)."""
+    zoom_mode = mode.strip().lower()
+    if zoom_mode not in ("in", "out"):
+        raise typer.BadParameter("mode must be in or out")
+    image_bytes = image.read_bytes()
+    try:
+        result = zoom_image(
+            image_bytes,
+            zoom_mode,  # type: ignore[arg-type]
+            factor=factor,
+            center_x=center_x,
+            center_y=center_y,
+            enhance=enhance,
+            prompt=prompt,
+            provider_name=provider.lower(),  # type: ignore[arg-type]
         )
     except ValueError as e:
         typer.echo(str(e), err=True)
