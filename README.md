@@ -8,12 +8,16 @@ Create and edit game images: **create** (text-to-image), **adjust**, **tile**, *
 pip install -e .
 ```
 
-## API keys (environment)
+## API keys
 
-- **OpenAI**: set `OPENAI_API_KEY`
-- **Fal (Gemini)**: set `FAL_KEY`
+**Web UI:** open **Settings** (gear icon, top right) to add, change, or remove API keys. Keys are stored in `settings.json` next to your image library (plain text on disk; file permissions are restricted when possible).
 
-Do not commit `.env` or keys to the repo.
+**Environment variables** override stored keys (useful for CI or shells):
+
+- **OpenAI**: `OPENAI_API_KEY`
+- **Fal**: `FAL_KEY`
+
+Do not commit `.env`, `settings.json`, or keys to the repo.
 
 ### Using a different OpenAI image model
 
@@ -79,15 +83,23 @@ Run the local web interface:
 game-images serve
 ```
 
-Then open http://127.0.0.1:8000 . Use **Create** for new images, **Adjust** / **Tile** / **Maps** for local processing, and **Extend** / **Manipulate** for AI edits. Results are saved to the library automatically.
+Then open http://127.0.0.1:8000 . Use the **gear icon** (top right) to set OpenAI and Fal API keys before Create / Extend / Manipulate.
+
+**Library → Edit → Create** flow:
+
+1. **Library** — browse, import, and click a thumbnail to set the **active image** (shown in the bar below the top toolbar).
+2. **Edit** — run local tools (Adjust, Tile, Maps), **Prepare** (shift before extend), or AI tools (Extend, Manipulate) on that image. Preview stays visible on the right.
+3. **Create** — text-to-image without an existing source; the result becomes the active image. Open **Edit** to refine it.
+
+Results from Create and Edit are saved to the library automatically.
 
 ### Image library
 
 The Web UI uses a local **image library** instead of one-off file uploads. Images are stored on disk and indexed with metadata (prompt, tags, dimensions).
 
-- **Image area**: Browse and select images from the library, or **Import** new ones. Shifted images are not saved until you add them.
-- **Manipulate**: Select a mask from the library, create one in the mask editor (optionally save to library), or upload a file.
-- **Results**: Generated images are automatically added to the library with prompt and source metadata.
+- **Library**: Browse and select images, or **Import** new ones. Selection is restored on reload when possible.
+- **Edit → Manipulate**: Select a mask from the library, create one in the mask editor (optionally save to library), or upload a file.
+- **Prepare (shift)**: In-memory prep for Extend; not saved until a later operation writes to the library.
 
 **Library location**: Set `GAME_IMAGES_LIBRARY` to a directory path. Default: `~/.local/share/game-images` (Linux/macOS) or `%LOCALAPPDATA%/game-images` (Windows). Fallback: `./library/` in the project root.
 

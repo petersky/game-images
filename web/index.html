@@ -28,7 +28,76 @@
     h1 { font-size: 1.5rem; margin: 0; color: var(--accent); }
     .headerSub { font-size: 0.8125rem; color: var(--muted); margin: 0.25rem 0 0 0; }
     .headerSub a { color: var(--accent); }
-    #appHeader { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); }
+    #appHeader {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .headerMain { flex: 1; min-width: 0; }
+    .settingsBtn {
+      margin-top: 0;
+      padding: 0.45rem 0.65rem;
+      background: var(--surface);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 1.25rem;
+      line-height: 1;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .settingsBtn:hover { color: var(--accent); border-color: var(--accent); }
+    .settingsModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 110;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+    .settingsModal.visible { display: flex; }
+    .settingsPanel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      max-width: 480px;
+      width: 100%;
+      max-height: 90vh;
+      overflow: auto;
+    }
+    .settingsHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .settingsHeader h2 { margin: 0; font-size: 1.25rem; color: var(--accent); }
+    .settingsHeader button { margin-top: 0; }
+    .settingsSection h3 { margin: 0 0 0.5rem 0; font-size: 1rem; color: var(--text); }
+    .keyRow { margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+    .keyRow:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .keyStatus { font-size: 0.8125rem; color: var(--muted); margin: 0 0 0.5rem 0; min-height: 1.25rem; }
+    .keyRow input[type="password"] {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.5rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    .keyRow input:disabled { opacity: 0.6; }
+    .keyActions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .keyActions button { margin-top: 0; }
+    .keyActions button.secondary { background: var(--border); color: var(--text); }
     .topBar {
       display: flex;
       align-items: center;
@@ -148,7 +217,6 @@
       animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #resultImg { max-width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--border); margin-top: 0.5rem; }
     .download { display: inline-block; margin-top: 0.5rem; color: var(--accent); }
     .error { color: #f7768e; margin-top: 0.5rem; }
 
@@ -284,7 +352,87 @@
     }
     .libraryImportRow { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
     .libraryImportRow input[type="file"] { width: auto; margin-bottom: 0; }
+    .activeImageBar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.5rem 1rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      min-height: 3.25rem;
+    }
+    .activeImageBarEmpty { color: var(--muted); font-size: 0.875rem; }
+    .activeImageBarContent { display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 0; }
+    .activeImageThumb {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .activeImageMeta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+    .activeImageLabel { font-size: 0.9375rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .activeImageDims { font-size: 0.8125rem; color: var(--muted); }
+    .activeImageActions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+    .activeImageActions button { margin-top: 0; padding: 0.4rem 0.75rem; font-size: 0.875rem; }
+    .activeImageActions button.secondary { background: var(--border); color: var(--text); }
+    .librarySaveBanner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.5rem 1rem;
+      background: rgba(122, 162, 247, 0.12);
+      border-bottom: 1px solid var(--accent);
+      font-size: 0.875rem;
+      color: var(--text);
+    }
+    .librarySaveBanner button { margin-top: 0; padding: 0.25rem 0.5rem; font-size: 0.8125rem; background: transparent; color: var(--accent); }
+    .workspaceShell { display: none; }
+    .workspaceShell.visible { display: block; }
+    .workspaceLayout {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .workspaceMain { flex: 1; min-width: 280px; }
+    .workspacePane { display: none; }
+    .workspacePane.active { display: block; }
+    .libraryPane { max-width: none; }
+    .libraryPane section { max-width: none; }
+    .libraryGridWide {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+    .editToolTabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .editToolTab {
+      margin-top: 0;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .editToolTab:hover { filter: none; background: rgba(122, 162, 247, 0.1); }
+    .editToolTab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .editToolTab:disabled { opacity: 0.45; cursor: not-allowed; }
+    .editToolPane { display: none; }
+    .editToolPane.active { display: block; }
+    .editToolPane section { max-width: 640px; }
+    .sidebarItem:disabled { opacity: 0.45; cursor: not-allowed; }
     @media (max-width: 767px) {
+      .activeImageBar { position: sticky; top: 0; z-index: 40; }
+      .workspaceLayout .previewSection { width: 100%; }
       .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 50; }
       .sidebar.collapsed { width: 48px; }
     }
@@ -293,8 +441,11 @@
 <body class="appShell">
   <div id="apiWarning" class="apiWarning" style="display: none;"></div>
   <header id="appHeader">
-    <h1>Game Images AI</h1>
-    <p class="headerSub">Run <code>game-images serve</code> and open <a href="http://127.0.0.1:8000">http://127.0.0.1:8000</a></p>
+    <div class="headerMain">
+      <h1>Game Images AI</h1>
+      <p class="headerSub">Run <code>game-images serve</code> and open <a href="http://127.0.0.1:8000">http://127.0.0.1:8000</a></p>
+    </div>
+    <button type="button" id="settingsOpenBtn" class="settingsBtn" aria-label="Settings" title="Settings">&#9881;</button>
   </header>
 
   <div id="topBar" class="topBar">
@@ -308,63 +459,56 @@
     </div>
   </div>
 
+  <div id="activeImageBar" class="activeImageBar">
+    <div id="activeImageBarEmpty" class="activeImageBarEmpty">No image selected — open Library or Create.</div>
+    <div id="activeImageBarContent" class="activeImageBarContent" style="display: none;">
+      <img id="activeImageThumb" class="activeImageThumb" alt="" />
+      <div class="activeImageMeta">
+        <span id="activeImageLabel" class="activeImageLabel"></span>
+        <span id="activeImageDims" class="activeImageDims"></span>
+      </div>
+      <div class="activeImageActions">
+        <button type="button" id="activeImageChangeBtn" class="secondary">Change…</button>
+        <button type="button" id="activeImageClearBtn" class="secondary">Clear</button>
+      </div>
+    </div>
+  </div>
+
   <div id="appBody" class="appBody">
     <nav id="sidebar" class="sidebar">
       <button type="button" id="sidebarToggle" class="sidebarToggle" aria-label="Collapse sidebar" title="Collapse sidebar">&#9664;</button>
       <ul class="sidebarNav">
-        <li><button type="button" class="sidebarItem active" data-area="image" data-first="I" title="Image"><span>Image</span></button></li>
+        <li><button type="button" class="sidebarItem active" data-area="library" data-first="L" title="Library"><span>Library</span></button></li>
         <li><button type="button" class="sidebarItem" data-area="create" data-first="C" title="Create"><span>Create</span></button></li>
-        <li><button type="button" class="sidebarItem" data-area="adjust" data-first="A" title="Adjust"><span>Adjust</span></button></li>
-        <li><button type="button" class="sidebarItem" data-area="tile" data-first="T" title="Tile"><span>Tile</span></button></li>
-        <li><button type="button" class="sidebarItem" data-area="maps" data-first="P" title="Maps"><span>Maps</span></button></li>
-        <li><button type="button" class="sidebarItem" data-area="extend" data-first="E" title="Extend"><span>Extend</span></button></li>
-        <li><button type="button" class="sidebarItem" data-area="manipulate" data-first="M" title="Manipulate"><span>Manipulate</span></button></li>
-        <li><button type="button" class="sidebarItem" data-area="result" data-first="R" title="Result"><span>Result</span></button></li>
+        <li><button type="button" class="sidebarItem" id="sidebarEditBtn" data-area="edit" data-first="E" title="Edit" disabled><span>Edit</span></button></li>
       </ul>
     </nav>
 
     <main id="mainContent" class="mainContent">
-      <div id="areaImage" class="areaPane active">
-        <div class="mainLayout">
-          <section class="formSection">
-            <label>Image library</label>
-            <div class="libraryImportRow">
-              <button type="button" id="libraryImportBtn">Import…</button>
-              <input type="file" name="libraryImport" id="libraryImportInput" accept="image/png,image/jpeg,image/webp" multiple style="display: none;" />
-            </div>
-            <div id="libraryGrid" class="libraryGrid"></div>
-            <p class="helpText">Select an image from the library or import new ones. Shifted images are not saved until you add them.</p>
-            <div class="shiftSection">
-              <label>Shift (optional)</label>
-              <p class="helpText">Move the image in a direction; the opposite side becomes black. Then use Extend to fill that area (e.g. Shift west → blank on right → Extend east).</p>
-              <div class="row">
-                <select name="shiftDirection" id="shiftDirection">
-                  <option value="west">West (blank on right)</option>
-                  <option value="east">East (blank on left)</option>
-                  <option value="north">North (blank at bottom)</option>
-                  <option value="south">South (blank at top)</option>
-                </select>
-                <input type="number" name="shiftAmount" id="shiftAmount" value="128" min="1" max="700" placeholder="px" style="width: 5rem;" />
-                <button type="button" id="applyShiftBtn">Apply shift</button>
-              </div>
-            </div>
-          </section>
-          <aside class="previewSection">
-            <h2>Preview</h2>
-            <div id="previewPlaceholder" class="previewPlaceholder">Select an image to preview</div>
-            <div id="previewContent" style="display: none;">
-              <div class="previewImageWrap">
-                <img id="previewImg" alt="Selected image" />
-              </div>
-              <dl class="previewMeta" id="previewMeta"></dl>
-            </div>
-          </aside>
-        </div>
+      <div id="librarySaveBanner" class="librarySaveBanner" style="display: none;" role="status">
+        <span>Saved to library.</span>
+        <button type="button" id="librarySaveBannerDismiss">Dismiss</button>
       </div>
 
-      <div id="areaCreate" class="areaPane">
-        <section class="formSection">
-          <h2 class="areaTitle">Create (text-to-image)</h2>
+      <div id="areaLibrary" class="areaPane active libraryPane">
+        <section>
+          <h2 class="areaTitle">Library</h2>
+          <label>Browse and select an image to edit</label>
+          <div class="libraryImportRow">
+            <button type="button" id="libraryImportBtn">Import…</button>
+            <input type="file" name="libraryImport" id="libraryImportInput" accept="image/png,image/jpeg,image/webp" multiple style="display: none;" />
+          </div>
+          <div id="libraryGrid" class="libraryGrid libraryGridWide"></div>
+          <p class="helpText">Click a thumbnail to set the active image, then open Edit for adjustments. Use Create to generate a new image from a prompt.</p>
+        </section>
+      </div>
+
+      <div id="workspaceShell" class="workspaceShell">
+        <div class="workspaceLayout">
+          <div class="workspaceMain">
+            <div id="areaCreate" class="workspacePane">
+              <section class="formSection">
+                <h2 class="areaTitle">Create (text-to-image)</h2>
           <label>Prompt</label>
           <input type="text" name="promptCreate" id="promptCreate" placeholder="e.g. Seamless dark asphalt road texture, top-down" required />
           <div class="row">
@@ -387,16 +531,29 @@
             <select name="modelCreate" id="openaiModelCreate">
               <option value="dall-e-3">DALL·E 3</option>
               <option value="dall-e-2">DALL·E 2</option>
+              <option value="gpt-image-1.5">GPT Image 1.5</option>
+              <option value="gpt-image-1">GPT Image 1</option>
+              <option value="gpt-image-1-mini">GPT Image 1 Mini</option>
             </select>
           </div>
-          <p class="helpText">Result is added to the library. Use Adjust / Tile / Maps, then Manipulate for AI refinements.</p>
-        </section>
-        <p id="errorCreate" class="error" style="display: none;"></p>
-      </div>
+                <p class="helpText">Generates a new image and sets it as the active image. Open Edit to refine it.</p>
+              </section>
+              <p id="errorCreate" class="error" style="display: none;"></p>
+            </div>
 
-      <div id="areaAdjust" class="areaPane">
-        <section class="formSection">
-          <h2 class="areaTitle">Adjust</h2>
+            <div id="areaEdit" class="workspacePane">
+              <nav class="editToolTabs" aria-label="Edit tools">
+                <button type="button" class="editToolTab active" data-tool="adjust">Adjust</button>
+                <button type="button" class="editToolTab" data-tool="tile">Tile</button>
+                <button type="button" class="editToolTab" data-tool="maps">Maps</button>
+                <button type="button" class="editToolTab" data-tool="prepare">Prepare</button>
+                <button type="button" class="editToolTab" data-tool="extend">Extend</button>
+                <button type="button" class="editToolTab" data-tool="manipulate">Manipulate</button>
+              </nav>
+
+              <div id="editToolAdjust" class="editToolPane active" data-tool="adjust">
+                <section class="formSection">
+                  <h2 class="areaTitle">Adjust</h2>
           <p class="helpText">Traditional edits (no API key). Run replaces the working image.</p>
           <label>Brightness <span id="brightnessVal">1.0</span></label>
           <input type="range" id="adjustBrightness" min="0.2" max="2" step="0.05" value="1" />
@@ -417,13 +574,13 @@
             <option value="y">Mirror Y</option>
             <option value="xy">Both</option>
           </select>
-        </section>
-        <p id="errorAdjust" class="error" style="display: none;"></p>
-      </div>
+                </section>
+                <p id="errorAdjust" class="error" style="display: none;"></p>
+              </div>
 
-      <div id="areaTile" class="areaPane">
-        <section class="formSection">
-          <h2 class="areaTitle">Tile / seamless</h2>
+              <div id="editToolTile" class="editToolPane" data-tool="tile">
+                <section class="formSection">
+                  <h2 class="areaTitle">Tile / seamless</h2>
           <label>Mode</label>
           <select id="tileMode">
             <option value="offset_x">Offset X (fix horizontal seam)</option>
@@ -434,14 +591,14 @@
             <option value="mirror_xy">Mirror XY (2×2 preview)</option>
             <option value="preview_2x2">Repeat preview 2×2</option>
           </select>
-          <p class="helpText">Offset swaps halves so seams move to the center; refine edges with Manipulate. Mirror modes help check tiling.</p>
-        </section>
-        <p id="errorTile" class="error" style="display: none;"></p>
-      </div>
+                  <p class="helpText">Offset swaps halves so seams move to the center; refine edges with Manipulate. Mirror modes help check tiling.</p>
+                </section>
+                <p id="errorTile" class="error" style="display: none;"></p>
+              </div>
 
-      <div id="areaMaps" class="areaPane">
-        <section class="formSection">
-          <h2 class="areaTitle">Texture maps</h2>
+              <div id="editToolMaps" class="editToolPane" data-tool="maps">
+                <section class="formSection">
+                  <h2 class="areaTitle">Texture maps</h2>
           <label>Map type</label>
           <select id="mapType">
             <option value="bump">Bump / height-ish</option>
@@ -452,14 +609,33 @@
           </select>
           <label>Strength <span id="mapStrengthVal">1.0</span></label>
           <input type="range" id="mapStrength" min="0.3" max="2.5" step="0.1" value="1" />
-          <p class="helpText">Procedural maps from luminance. Save each map to the library, then import into your game.</p>
-        </section>
-        <p id="errorMaps" class="error" style="display: none;"></p>
-      </div>
+                  <p class="helpText">Procedural maps from luminance. Each result is saved to the library automatically.</p>
+                </section>
+                <p id="errorMaps" class="error" style="display: none;"></p>
+              </div>
 
-      <div id="areaExtend" class="areaPane">
-        <section class="formSection">
-          <h2 class="areaTitle">Extend (outpaint)</h2>
+              <div id="editToolPrepare" class="editToolPane" data-tool="prepare">
+                <section class="formSection">
+                  <h2 class="areaTitle">Prepare — shift</h2>
+                  <p class="helpText">Move the image in a direction; the opposite side becomes black. Then use Extend to fill that area (e.g. Shift west → blank on right → Extend east). Shift is applied in memory until you run another operation.</p>
+                  <label>Direction</label>
+                  <div class="row">
+                    <select name="shiftDirection" id="shiftDirection">
+                      <option value="west">West (blank on right)</option>
+                      <option value="east">East (blank on left)</option>
+                      <option value="north">North (blank at bottom)</option>
+                      <option value="south">South (blank at top)</option>
+                    </select>
+                    <input type="number" name="shiftAmount" id="shiftAmount" value="128" min="1" max="700" placeholder="px" style="width: 5rem;" />
+                    <button type="button" id="applyShiftBtn">Apply shift</button>
+                  </div>
+                </section>
+                <p id="errorPrepare" class="error" style="display: none;"></p>
+              </div>
+
+              <div id="editToolExtend" class="editToolPane" data-tool="extend">
+                <section class="formSection">
+                  <h2 class="areaTitle">Extend (outpaint)</h2>
           <label>Direction(s)</label>
           <select name="direction" id="direction">
             <option value="north">North</option>
@@ -487,13 +663,13 @@
               <option value="gpt-image-1-mini">GPT Image 1 Mini</option>
             </select>
           </div>
-        </section>
-        <p id="errorExtend" class="error" style="display: none;"></p>
-      </div>
+                </section>
+                <p id="errorExtend" class="error" style="display: none;"></p>
+              </div>
 
-      <div id="areaManipulate" class="areaPane">
-        <section class="formSection">
-          <h2 class="areaTitle">Manipulate (inpaint)</h2>
+              <div id="editToolManipulate" class="editToolPane" data-tool="manipulate">
+                <section class="formSection">
+                  <h2 class="areaTitle">Manipulate (inpaint)</h2>
           <label>Prompt</label>
           <input type="text" name="promptManipulate" id="promptManipulate" placeholder="e.g. Add a red hat" required />
           <label>Mask (optional)</label>
@@ -523,18 +699,23 @@
               <option value="gpt-image-1-mini">GPT Image 1 Mini</option>
             </select>
           </div>
-        </section>
-        <p id="errorManipulate" class="error" style="display: none;"></p>
-      </div>
+                </section>
+                <p id="errorManipulate" class="error" style="display: none;"></p>
+              </div>
+            </div>
+          </div>
 
-      <div id="areaResult" class="areaPane">
-        <section id="resultSection">
-          <h2 class="areaTitle">Result</h2>
-          <p id="resultLibraryFeedback" style="display: none; font-size: 0.875rem; color: var(--muted); margin-bottom: 0.5rem;">Added to library.</p>
-          <div id="resultPlaceholder" class="previewPlaceholder">Run an operation to see the result.</div>
-          <img id="resultImg" alt="Result" style="display: none;" />
-          <a id="downloadLink" class="download" download="result.png" style="display: none;">Download PNG</a>
-        </section>
+          <aside class="previewSection">
+            <h2>Preview</h2>
+            <div id="previewPlaceholder" class="previewPlaceholder">Select or create an image to preview</div>
+            <div id="previewContent" style="display: none;">
+              <div class="previewImageWrap">
+                <img id="previewImg" alt="Active image" />
+              </div>
+              <dl class="previewMeta" id="previewMeta"></dl>
+            </div>
+          </aside>
+        </div>
       </div>
     </main>
   </div>
@@ -576,6 +757,39 @@
     </div>
   </div>
 
+  <div id="settingsModal" class="settingsModal" role="dialog" aria-labelledby="settingsTitle" aria-modal="true">
+    <div class="settingsPanel">
+      <div class="settingsHeader">
+        <h2 id="settingsTitle">Settings</h2>
+        <button type="button" id="settingsCloseBtn" class="secondary">Close</button>
+      </div>
+      <section class="settingsSection">
+        <h3>API keys</h3>
+        <p class="helpText">Keys are saved locally in your Game Images data folder. Environment variables (<code>OPENAI_API_KEY</code>, <code>FAL_KEY</code>) override stored values.</p>
+        <div class="keyRow">
+          <label for="openaiKeyInput">OpenAI API key</label>
+          <p id="openaiKeyStatus" class="keyStatus"></p>
+          <input type="password" id="openaiKeyInput" autocomplete="off" spellcheck="false" placeholder="sk-…" />
+          <div class="keyActions">
+            <button type="button" id="openaiKeySaveBtn">Save</button>
+            <button type="button" id="openaiKeyRemoveBtn" class="secondary">Remove</button>
+          </div>
+        </div>
+        <div class="keyRow">
+          <label for="falKeyInput">Fal API key</label>
+          <p id="falKeyStatus" class="keyStatus"></p>
+          <input type="password" id="falKeyInput" autocomplete="off" spellcheck="false" placeholder="Fal key…" />
+          <div class="keyActions">
+            <button type="button" id="falKeySaveBtn">Save</button>
+            <button type="button" id="falKeyRemoveBtn" class="secondary">Remove</button>
+          </div>
+        </div>
+        <p id="settingsError" class="error" style="display: none;"></p>
+        <p id="settingsPathHint" class="helpText" style="margin-top: 1rem;"></p>
+      </section>
+    </div>
+  </div>
+
   <script>
     const libraryImportBtn = document.getElementById('libraryImportBtn');
     const libraryImportInput = document.getElementById('libraryImportInput');
@@ -586,32 +800,240 @@
     const previewImg = document.getElementById('previewImg');
     const previewMeta = document.getElementById('previewMeta');
     const applyShiftBtn = document.getElementById('applyShiftBtn');
-    const resultImg = document.getElementById('resultImg');
-    const downloadLink = document.getElementById('downloadLink');
-    const resultPlaceholder = document.getElementById('resultPlaceholder');
     const topBarStatusText = document.getElementById('topBarStatusText');
     const topBarSpinner = document.getElementById('topBarSpinner');
     const topBarRunBtn = document.getElementById('topBarRunBtn');
     const topBarDownloadLink = document.getElementById('topBarDownloadLink');
     const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarEditBtn = document.getElementById('sidebarEditBtn');
+    const workspaceShell = document.getElementById('workspaceShell');
+    const areaCreate = document.getElementById('areaCreate');
+    const areaEdit = document.getElementById('areaEdit');
+    const activeImageBarEmpty = document.getElementById('activeImageBarEmpty');
+    const activeImageBarContent = document.getElementById('activeImageBarContent');
+    const activeImageThumb = document.getElementById('activeImageThumb');
+    const activeImageLabelEl = document.getElementById('activeImageLabel');
+    const activeImageDimsEl = document.getElementById('activeImageDims');
+    const librarySaveBanner = document.getElementById('librarySaveBanner');
     let previewObjectUrl = null;
+    let activeImageThumbUrl = null;
     let workingImageBlob = null;
     let maskBlob = null;
     let selectedLibraryId = null;
     let selectedMaskLibraryId = null;
-    let currentArea = 'image';
+    let activeImageLabel = '';
+    let mainArea = 'library';
+    let editTool = 'adjust';
     let lastResultUrl = null;
+    let apiOrigin = null;
+
+    async function resolveApiOrigin() {
+      const candidates = [window.location.origin];
+      ['http://127.0.0.1:8000', 'http://localhost:8000'].forEach(function(o) {
+        if (candidates.indexOf(o) === -1) candidates.push(o);
+      });
+      for (let i = 0; i < candidates.length; i++) {
+        const origin = candidates[i];
+        try {
+          const r = await fetch(origin + '/health');
+          if (!r.ok) continue;
+          const data = await r.json();
+          if (!data || data.status !== 'ok') continue;
+          if (data.app === 'game-images') {
+            apiOrigin = origin;
+            return true;
+          }
+          if (!data.app && origin === window.location.origin) {
+            apiOrigin = origin;
+            return true;
+          }
+        } catch (e) { /* try next origin */ }
+      }
+      return false;
+    }
+
+    function apiUrl(path) {
+      const base = apiOrigin || window.location.origin;
+      return base + (path.charAt(0) === '/' ? path : '/' + path);
+    }
+
+    function apiFetch(path, options) {
+      return fetch(apiUrl(path), options);
+    }
+
+    function errorFromResponse(res, errBody, path) {
+      const detail = errBody && errBody.detail;
+      const msg = typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map(function(d) { return d.msg || d; }).join('; ') : res.statusText;
+      if (res.status === 404) {
+        return 'API not found at ' + apiUrl(path) + '. Run game-images serve from main/ and open http://127.0.0.1:8000 (not a static file or Live Server URL).';
+      }
+      return msg || 'Request failed';
+    }
 
     (async function checkApi() {
-      try {
-        const r = await fetch(window.location.origin + '/health');
-        if (!r.ok) throw new Error(r.status);
-      } catch (e) {
-        const el = document.getElementById('apiWarning');
-        el.style.display = 'block';
-        el.innerHTML = 'API not found (404). Use this app from the correct server: open <a href="http://127.0.0.1:8000">http://127.0.0.1:8000</a> after running <code>game-images serve</code> in the project. You are currently at: ' + window.location.origin;
+      const ok = await resolveApiOrigin();
+      if (ok) return;
+      const el = document.getElementById('apiWarning');
+      el.style.display = 'block';
+      el.innerHTML = 'Game Images API not reachable. Run <code>game-images serve</code> in the <code>main/</code> directory, then open <a href="http://127.0.0.1:8000">http://127.0.0.1:8000</a> (not a static file or Live Server URL). Current page: ' + window.location.href;
+    })();
+
+    (function initSettings() {
+      const modal = document.getElementById('settingsModal');
+      const openBtn = document.getElementById('settingsOpenBtn');
+      const closeBtn = document.getElementById('settingsCloseBtn');
+      const settingsError = document.getElementById('settingsError');
+      const settingsPathHint = document.getElementById('settingsPathHint');
+      const openaiInput = document.getElementById('openaiKeyInput');
+      const falInput = document.getElementById('falKeyInput');
+      const openaiStatus = document.getElementById('openaiKeyStatus');
+      const falStatus = document.getElementById('falKeyStatus');
+      const openaiSave = document.getElementById('openaiKeySaveBtn');
+      const openaiRemove = document.getElementById('openaiKeyRemoveBtn');
+      const falSave = document.getElementById('falKeySaveBtn');
+      const falRemove = document.getElementById('falKeyRemoveBtn');
+
+      function showSettingsError(msg) {
+        settingsError.textContent = msg || '';
+        settingsError.style.display = msg ? 'block' : 'none';
       }
+
+      function renderKeyRow(which, info) {
+        const statusEl = which === 'openai' ? openaiStatus : falStatus;
+        const inputEl = which === 'openai' ? openaiInput : falInput;
+        const saveBtn = which === 'openai' ? openaiSave : falSave;
+        const removeBtn = which === 'openai' ? openaiRemove : falRemove;
+        const envName = which === 'openai' ? 'OPENAI_API_KEY' : 'FAL_KEY';
+
+        if (info.from_env) {
+          statusEl.textContent = 'Using environment variable ' + envName + (info.hint ? ' (' + info.hint + ')' : '') + '.';
+          inputEl.disabled = true;
+          inputEl.placeholder = 'Set via environment variable';
+          saveBtn.disabled = true;
+          removeBtn.disabled = true;
+        } else if (info.set && info.hint) {
+          statusEl.textContent = 'Saved: ' + info.hint;
+          inputEl.disabled = false;
+          inputEl.placeholder = 'Enter a new key to replace';
+          saveBtn.disabled = false;
+          removeBtn.disabled = false;
+        } else {
+          statusEl.textContent = 'Not set';
+          inputEl.disabled = false;
+          inputEl.placeholder = which === 'openai' ? 'sk-…' : 'Fal key…';
+          saveBtn.disabled = false;
+          removeBtn.disabled = true;
+        }
+      }
+
+      async function loadKeysStatus() {
+        showSettingsError('');
+        if (!apiOrigin) {
+          const ok = await resolveApiOrigin();
+          if (!ok) {
+            showSettingsError('Connect to the Game Images server before changing API keys.');
+            return;
+          }
+        }
+        const r = await apiFetch('/settings/keys');
+        if (!r.ok) {
+          showSettingsError('Could not load API key status.');
+          return;
+        }
+        const data = await r.json();
+        renderKeyRow('openai', data.openai);
+        renderKeyRow('fal', data.fal);
+        if (data.settings_path) {
+          settingsPathHint.textContent = 'Stored keys file: ' + data.settings_path;
+        }
+      }
+
+      async function putKeys(body) {
+        const r = await apiFetch('/settings/keys', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          const err = await r.json().catch(function() { return {}; });
+          throw new Error(errorFromResponse(r, err, '/settings/keys'));
+        }
+        return r.json();
+      }
+
+      function openSettings() {
+        modal.classList.add('visible');
+        openaiInput.value = '';
+        falInput.value = '';
+        loadKeysStatus();
+      }
+
+      function closeSettings() {
+        modal.classList.remove('visible');
+        showSettingsError('');
+        openaiInput.value = '';
+        falInput.value = '';
+      }
+
+      openBtn.addEventListener('click', openSettings);
+      closeBtn.addEventListener('click', closeSettings);
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeSettings();
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.classList.contains('visible')) closeSettings();
+      });
+
+      openaiSave.addEventListener('click', async function() {
+        const val = openaiInput.value.trim();
+        if (!val) {
+          showSettingsError('Enter an OpenAI API key to save.');
+          return;
+        }
+        try {
+          await putKeys({ openai_api_key: val });
+          openaiInput.value = '';
+          await loadKeysStatus();
+        } catch (err) {
+          showSettingsError(err.message);
+        }
+      });
+
+      openaiRemove.addEventListener('click', async function() {
+        try {
+          await putKeys({ openai_api_key: '' });
+          openaiInput.value = '';
+          await loadKeysStatus();
+        } catch (err) {
+          showSettingsError(err.message);
+        }
+      });
+
+      falSave.addEventListener('click', async function() {
+        const val = falInput.value.trim();
+        if (!val) {
+          showSettingsError('Enter a Fal API key to save.');
+          return;
+        }
+        try {
+          await putKeys({ fal_api_key: val });
+          falInput.value = '';
+          await loadKeysStatus();
+        } catch (err) {
+          showSettingsError(err.message);
+        }
+      });
+
+      falRemove.addEventListener('click', async function() {
+        try {
+          await putKeys({ fal_api_key: '' });
+          falInput.value = '';
+          await loadKeysStatus();
+        } catch (err) {
+          showSettingsError(err.message);
+        }
+      });
     })();
 
     function formatBytes(n) {
@@ -657,7 +1079,7 @@
       previewPlaceholder.style.display = 'none';
       previewContent.style.display = 'block';
       previewMeta.innerHTML = '';
-      addMetaRow('Source', label || 'Shifted image');
+      addMetaRow('Source', label || activeImageLabel || 'Active image');
       addMetaRow('Size', formatBytes(blob.size));
       addMetaRow('Type', blob.type || 'image/png');
       addMetaRow('Dimensions', '…');
@@ -665,12 +1087,72 @@
         const w = previewImg.naturalWidth;
         const h = previewImg.naturalHeight;
         const dimsEl = previewMeta.querySelector('[data-dim]');
-        if (dimsEl) dimsEl.textContent = w + ' × ' + h + ' px';
+        const dimStr = w + ' × ' + h + ' px';
+        if (dimsEl) dimsEl.textContent = dimStr;
+        activeImageDimsEl.textContent = dimStr;
+        updateActiveImageBar();
       };
       previewImg.removeAttribute('src');
       previewObjectUrl = URL.createObjectURL(blob);
       previewImg.src = previewObjectUrl;
       previewContent.offsetHeight;
+      updateActiveImageBar();
+    }
+
+    function updateActiveImageBar() {
+      if (!workingImageBlob) {
+        activeImageBarEmpty.style.display = 'block';
+        activeImageBarContent.style.display = 'none';
+        if (activeImageThumbUrl) {
+          URL.revokeObjectURL(activeImageThumbUrl);
+          activeImageThumbUrl = null;
+        }
+        activeImageThumb.removeAttribute('src');
+        setEditNavEnabled(false);
+        return;
+      }
+      activeImageBarEmpty.style.display = 'none';
+      activeImageBarContent.style.display = 'flex';
+      activeImageLabelEl.textContent = activeImageLabel || (selectedLibraryId ? 'Library image' : 'Working image');
+      if (activeImageThumbUrl) URL.revokeObjectURL(activeImageThumbUrl);
+      activeImageThumbUrl = URL.createObjectURL(workingImageBlob);
+      activeImageThumb.src = activeImageThumbUrl;
+      setEditNavEnabled(true);
+      if (previewImg.naturalWidth && previewImg.naturalHeight) {
+        activeImageDimsEl.textContent = previewImg.naturalWidth + ' × ' + previewImg.naturalHeight + ' px';
+      } else {
+        activeImageDimsEl.textContent = formatBytes(workingImageBlob.size);
+      }
+    }
+
+    function setEditNavEnabled(enabled) {
+      sidebarEditBtn.disabled = !enabled;
+      document.querySelectorAll('.editToolTab').forEach(function(btn) {
+        btn.disabled = !enabled;
+      });
+    }
+
+    function clearActiveImage() {
+      workingImageBlob = null;
+      selectedLibraryId = null;
+      activeImageLabel = '';
+      maskBlob = null;
+      selectedMaskLibraryId = null;
+      document.getElementById('maskStatus').textContent = '';
+      maskLibrarySelect.value = '';
+      localStorage.removeItem('activeLibraryId');
+      if (previewObjectUrl) {
+        URL.revokeObjectURL(previewObjectUrl);
+        previewObjectUrl = null;
+      }
+      previewPlaceholder.style.display = 'block';
+      previewContent.style.display = 'none';
+      previewPlaceholder.textContent = 'Select or create an image to preview';
+      previewMeta.innerHTML = '';
+      previewImg.removeAttribute('src');
+      updateActiveImageBar();
+      refreshLibraryGrid();
+      updateRunButton();
     }
 
     function showPreview(file) {
@@ -689,7 +1171,7 @@
 
     async function refreshLibraryGrid() {
       try {
-        const r = await fetch('/library?type=image,result');
+        const r = await apiFetch('/library?type=image,result');
         if (!r.ok) return;
         const items = await r.json();
         libraryGrid.innerHTML = '';
@@ -703,14 +1185,14 @@
           img.alt = item.filename || '';
           img.loading = 'lazy';
           div.appendChild(img);
-          div.addEventListener('click', function() { selectFromLibrary(item.id); });
+          div.addEventListener('click', function() { selectFromLibrary(item.id, item); });
           libraryGrid.appendChild(div);
         });
       } catch (e) { /* ignore */ }
     }
     async function refreshMaskLibrarySelect() {
       try {
-        const r = await fetch('/library?type=mask');
+        const r = await apiFetch('/library?type=mask');
         if (!r.ok) return;
         const items = await r.json();
         const sel = maskLibrarySelect;
@@ -726,69 +1208,139 @@
         else if (selectedMaskLibraryId) sel.value = selectedMaskLibraryId;
       } catch (e) { /* ignore */ }
     }
-    async function selectFromLibrary(id) {
+    async function selectFromLibrary(id, meta) {
       try {
-        const r = await fetch('/library/' + id);
+        const r = await apiFetch('/library/' + id);
         if (!r.ok) throw new Error('Failed to load image');
         const blob = await r.blob();
         workingImageBlob = blob;
         selectedLibraryId = id;
+        activeImageLabel = (meta && meta.filename) ? meta.filename : ('Library ' + id.slice(0, 8));
         maskBlob = null;
         selectedMaskLibraryId = null;
         document.getElementById('maskStatus').textContent = '';
         maskLibrarySelect.value = '';
+        localStorage.setItem('activeLibraryId', id);
         showPreviewFromBlob(blob, 'From library');
         refreshLibraryGrid();
         updateRunButton();
-        setStatus('Ready', false);
+        setStatus('Selected: ' + activeImageLabel, false);
       } catch (err) {
         setStatus(err.message, false);
       }
     }
-    const errorElByArea = {
+    const errorElByTool = {
       create: 'errorCreate',
       adjust: 'errorAdjust',
       tile: 'errorTile',
       maps: 'errorMaps',
+      prepare: 'errorPrepare',
       extend: 'errorExtend',
       manipulate: 'errorManipulate',
     };
+    const runnableEditTools = ['adjust', 'tile', 'maps', 'extend', 'manipulate'];
+    function getOperationArea() {
+      if (mainArea === 'edit') return editTool;
+      if (mainArea === 'create') return 'create';
+      return null;
+    }
     function getErrorEl() {
-      const id = errorElByArea[currentArea] || 'errorExtend';
+      const op = getOperationArea();
+      const id = errorElByTool[op] || 'errorExtend';
       return document.getElementById(id);
     }
-    const runnableAreas = ['create', 'adjust', 'tile', 'maps', 'extend', 'manipulate'];
     function setStatus(text, showSpinner) {
       topBarStatusText.textContent = text;
       topBarSpinner.style.display = showSpinner ? 'block' : 'none';
     }
     let isRequestInProgress = false;
     function updateRunButton() {
-      if (!runnableAreas.includes(currentArea) || isRequestInProgress) {
+      const op = getOperationArea();
+      const runnable = mainArea === 'create' || (mainArea === 'edit' && runnableEditTools.includes(editTool));
+      if (!runnable || isRequestInProgress || mainArea === 'library') {
         topBarRunBtn.disabled = true;
+        topBarRunBtn.textContent = 'Run';
+        topBarRunBtn.style.display = mainArea === 'library' ? 'none' : 'inline-block';
         return;
       }
-      if (currentArea === 'create') {
+      topBarRunBtn.style.display = 'inline-block';
+      if (mainArea === 'create') {
+        topBarRunBtn.textContent = 'Generate';
         const p = document.getElementById('promptCreate').value.trim();
         topBarRunBtn.disabled = !p;
         return;
       }
+      topBarRunBtn.textContent = 'Apply';
+      if (editTool === 'manipulate') {
+        const p = document.getElementById('promptManipulate').value.trim();
+        topBarRunBtn.disabled = !workingImageBlob || !p;
+        return;
+      }
       topBarRunBtn.disabled = !workingImageBlob;
     }
+    function switchEditTool(tool) {
+      if (!workingImageBlob) {
+        setStatus('Select an image in Library or create one.', false);
+        return;
+      }
+      editTool = tool;
+      document.querySelectorAll('.editToolTab').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.tool === tool);
+      });
+      document.querySelectorAll('.editToolPane').forEach(function(p) {
+        p.classList.toggle('active', p.dataset.tool === tool);
+      });
+      updateRunButton();
+      updateAreaStatus();
+    }
+    function updateAreaStatus() {
+      if (mainArea === 'library') {
+        setStatus(workingImageBlob ? 'Image selected — open Edit to modify.' : 'Select an image from the library.', false);
+      } else if (mainArea === 'create') {
+        setStatus('New image from prompt — no source image required.', false);
+      } else if (mainArea === 'edit') {
+        const name = activeImageLabel || 'active image';
+        setStatus('Editing: ' + name, false);
+      }
+    }
     function switchArea(area) {
-      currentArea = area;
+      if (area === 'edit' && !workingImageBlob) {
+        setStatus('Select an image in Library or create one.', false);
+        return;
+      }
+      mainArea = area;
       document.querySelectorAll('.areaPane').forEach(function(p) { p.classList.remove('active'); });
       document.getElementById('area' + area.charAt(0).toUpperCase() + area.slice(1)).classList.add('active');
-      document.querySelectorAll('.sidebarItem').forEach(function(b) { b.classList.toggle('active', b.dataset.area === area); });
+      document.querySelectorAll('.sidebarItem').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.area === area);
+      });
+      if (area === 'library') {
+        workspaceShell.classList.remove('visible');
+      } else {
+        workspaceShell.classList.add('visible');
+        areaCreate.classList.toggle('active', area === 'create');
+        areaEdit.classList.toggle('active', area === 'edit');
+      }
       topBarDownloadLink.style.display = lastResultUrl ? 'inline-block' : 'none';
       updateRunButton();
-      if (area === 'image') setStatus(workingImageBlob ? 'Ready' : 'Select an image to start.', false);
-      else if (area === 'result') setStatus(lastResultUrl ? 'Result ready' : 'Run an operation to see the result.', false);
-      else if (area === 'create') setStatus('Enter a prompt and Run to generate a new image.', false);
-      else if (area === 'adjust' || area === 'tile' || area === 'maps') setStatus(workingImageBlob ? 'Ready' : 'Select an image first.', false);
+      updateAreaStatus();
     }
     document.querySelectorAll('.sidebarItem').forEach(function(btn) {
-      btn.addEventListener('click', function() { switchArea(this.dataset.area); });
+      btn.addEventListener('click', function() {
+        if (this.disabled) return;
+        switchArea(this.dataset.area);
+      });
+    });
+    document.querySelectorAll('.editToolTab').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        if (this.disabled) return;
+        switchEditTool(this.dataset.tool);
+      });
+    });
+    document.getElementById('activeImageChangeBtn').addEventListener('click', function() { switchArea('library'); });
+    document.getElementById('activeImageClearBtn').addEventListener('click', clearActiveImage);
+    document.getElementById('librarySaveBannerDismiss').addEventListener('click', function() {
+      librarySaveBanner.style.display = 'none';
     });
     if (localStorage.getItem('sidebarCollapsed') === '1') sidebar.classList.add('collapsed');
     sidebarToggle.addEventListener('click', function() {
@@ -808,7 +1360,7 @@
         formData.append('image', f, f.name || 'image.png');
         formData.append('type', 'image');
         try {
-          const r = await fetch('/library/import', { method: 'POST', body: formData });
+          const r = await apiFetch('/library/import', { method: 'POST', body: formData });
           if (!r.ok) throw new Error('Import failed');
         } catch (err) {
           setStatus(err.message, false);
@@ -818,6 +1370,7 @@
       this.value = '';
       refreshLibraryGrid();
       setStatus('Import complete. Select an image from the library.', false);
+      updateAreaStatus();
     });
 
     applyShiftBtn.addEventListener('click', async function() {
@@ -831,7 +1384,7 @@
       formData.append('direction', document.getElementById('shiftDirection').value);
       formData.append('amount', document.getElementById('shiftAmount').value);
       try {
-        const res = await fetch('/shift', { method: 'POST', body: formData });
+        const res = await apiFetch('/shift', { method: 'POST', body: formData });
         if (!res.ok) {
           const err = await res.json().catch(() => ({ detail: res.statusText }));
           throw new Error(err.detail || res.statusText);
@@ -842,10 +1395,12 @@
         }
         workingImageBlob = blob;
         selectedLibraryId = null;
+        activeImageLabel = 'Shifted image';
+        localStorage.removeItem('activeLibraryId');
         maskBlob = null;
         document.getElementById('maskStatus').textContent = '';
         showPreviewFromBlob(blob, 'Shifted image');
-        setStatus('Ready', false);
+        setStatus('Shift applied — use Extend to fill blank edges.', false);
         updateRunButton();
       } catch (err) {
         setStatus(err.message, false);
@@ -1008,7 +1563,7 @@
           formData.append('image', blob, 'mask.png');
           formData.append('type', 'mask');
           try {
-            const r = await fetch('/library/import', { method: 'POST', body: formData });
+            const r = await apiFetch('/library/import', { method: 'POST', body: formData });
             if (r.ok) {
               const data = await r.json();
               selectedMaskLibraryId = data.id;
@@ -1085,7 +1640,7 @@
         const id = this.value;
         if (!id) { maskBlob = null; selectedMaskLibraryId = null; maskStatus.textContent = ''; return; }
         try {
-          const r = await fetch('/library/' + id);
+          const r = await apiFetch('/library/' + id);
           if (!r.ok) throw new Error('Failed to load mask');
           maskBlob = await r.blob();
           selectedMaskLibraryId = id;
@@ -1110,34 +1665,43 @@
     async function finishWithResult(blob, promptForLibrary) {
       const sourceId = selectedLibraryId;
       const maskId = selectedMaskLibraryId;
+      const wasCreate = mainArea === 'create';
       if (lastResultUrl) URL.revokeObjectURL(lastResultUrl);
       lastResultUrl = URL.createObjectURL(blob);
-      resultImg.src = lastResultUrl;
-      resultImg.style.display = 'block';
-      downloadLink.href = lastResultUrl;
-      downloadLink.style.display = 'inline-block';
-      resultPlaceholder.style.display = 'none';
       topBarDownloadLink.href = lastResultUrl;
       topBarDownloadLink.style.display = 'inline-block';
       workingImageBlob = blob;
       selectedLibraryId = null;
-      showPreviewFromBlob(blob, 'Working image');
-      setStatus('Result ready', false);
-      switchArea('result');
-      document.getElementById('resultLibraryFeedback').style.display = 'none';
+      activeImageLabel = promptForLibrary ? promptForLibrary.slice(0, 48) : 'Latest result';
+      localStorage.removeItem('activeLibraryId');
+      showPreviewFromBlob(blob, 'Latest result');
+      librarySaveBanner.style.display = 'none';
       try {
         const saveForm = new FormData();
         saveForm.append('image', blob, 'result.png');
         saveForm.append('prompt', promptForLibrary || '');
         if (sourceId) saveForm.append('source_id', sourceId);
         if (maskId) saveForm.append('mask_id', maskId);
-        const saveRes = await fetch('/library/from-result', { method: 'POST', body: saveForm });
+        const saveRes = await apiFetch('/library/from-result', { method: 'POST', body: saveForm });
         if (saveRes.ok) {
-          document.getElementById('resultLibraryFeedback').style.display = 'block';
+          librarySaveBanner.style.display = 'flex';
           refreshLibraryGrid();
+          const saved = await saveRes.json().catch(function() { return null; });
+          if (saved && saved.id) {
+            selectedLibraryId = saved.id;
+            localStorage.setItem('activeLibraryId', saved.id);
+            if (saved.metadata && saved.metadata.filename) activeImageLabel = saved.metadata.filename;
+            updateActiveImageBar();
+          }
         }
       } catch (e) { /* ignore */ }
+      if (wasCreate) {
+        switchArea('edit');
+        switchEditTool('adjust');
+      }
+      setStatus('Done — preview updated.', false);
       updateRunButton();
+      updateAreaStatus();
     }
 
     async function runOperation() {
@@ -1151,8 +1715,15 @@
       let endpoint = '';
       let promptForLibrary = '';
 
+      const op = mainArea === 'create' ? 'create' : (mainArea === 'edit' ? editTool : null);
       try {
-        if (currentArea === 'create') {
+        if (!apiOrigin) {
+          const ok = await resolveApiOrigin();
+          if (!ok) {
+            throw new Error('Game Images API not available. Run game-images serve from main/ and open http://127.0.0.1:8000');
+          }
+        }
+        if (op === 'create') {
           promptForLibrary = document.getElementById('promptCreate').value.trim();
           if (!promptForLibrary) throw new Error('Prompt is required.');
           endpoint = '/create';
@@ -1164,8 +1735,8 @@
             formData.append('model', document.getElementById('openaiModelCreate').value);
           }
         } else if (!workingImageBlob) {
-          throw new Error('Select an image or apply a shift first.');
-        } else if (currentArea === 'adjust') {
+          throw new Error('Select an image in Library or create one first.');
+        } else if (op === 'adjust') {
           endpoint = '/adjust';
           formData.append('image', workingImageBlob, 'image.png');
           formData.append('brightness', document.getElementById('adjustBrightness').value);
@@ -1176,18 +1747,18 @@
           formData.append('rotate_degrees', document.getElementById('adjustRotate').value);
           formData.append('flip', document.getElementById('adjustFlip').value);
           promptForLibrary = 'adjust';
-        } else if (currentArea === 'tile') {
+        } else if (op === 'tile') {
           endpoint = '/tile';
           formData.append('image', workingImageBlob, 'image.png');
           formData.append('mode', document.getElementById('tileMode').value);
           promptForLibrary = 'tile:' + document.getElementById('tileMode').value;
-        } else if (currentArea === 'maps') {
+        } else if (op === 'maps') {
           endpoint = '/maps';
           formData.append('image', workingImageBlob, 'image.png');
           formData.append('map_type', document.getElementById('mapType').value);
           formData.append('strength', document.getElementById('mapStrength').value);
           promptForLibrary = 'map:' + document.getElementById('mapType').value;
-        } else if (currentArea === 'extend') {
+        } else if (op === 'extend') {
           endpoint = '/extend';
           promptForLibrary = document.getElementById('prompt').value || 'Seamlessly extend the image.';
           formData.append('image', workingImageBlob, 'image.png');
@@ -1198,7 +1769,7 @@
           }
           formData.append('direction', document.getElementById('direction').value);
           formData.append('amount', document.getElementById('amount').value);
-        } else if (currentArea === 'manipulate') {
+        } else if (op === 'manipulate') {
           promptForLibrary = document.getElementById('promptManipulate').value.trim();
           if (!promptForLibrary) throw new Error('Prompt is required for Manipulate.');
           endpoint = '/manipulate';
@@ -1215,10 +1786,10 @@
           throw new Error('Nothing to run in this panel.');
         }
 
-        const res = await fetch(endpoint, { method: 'POST', body: formData });
+        const res = await apiFetch(endpoint, { method: 'POST', body: formData });
         if (!res.ok) {
-          const err = await res.json().catch(() => ({ detail: res.statusText }));
-          throw new Error(err.detail || res.statusText);
+          const err = await res.json().catch(function() { return {}; });
+          throw new Error(errorFromResponse(res, err, endpoint));
         }
         const blob = await res.blob();
         if (blob.size === 0) throw new Error('Server returned an empty image.');
@@ -1245,6 +1816,7 @@
     bindSlider('adjustBlur', 'blurVal');
     bindSlider('mapStrength', 'mapStrengthVal');
     document.getElementById('promptCreate').addEventListener('input', updateRunButton);
+    document.getElementById('promptManipulate').addEventListener('input', updateRunButton);
     document.getElementById('providerCreate').addEventListener('change', function() {
       document.getElementById('modelRowCreate').style.display = this.value === 'openai' ? 'block' : 'none';
     });
@@ -1252,9 +1824,22 @@
 
     topBarRunBtn.addEventListener('click', runOperation);
     updateRunButton();
-    setStatus('Select an image to start.', false);
+    updateActiveImageBar();
+    updateAreaStatus();
     refreshLibraryGrid();
     refreshMaskLibrarySelect();
+    (async function restoreLibrarySelection() {
+      await resolveApiOrigin();
+      const savedId = localStorage.getItem('activeLibraryId');
+      if (!savedId) return;
+      try {
+        const r = await apiFetch('/library?type=image,result');
+        if (!r.ok) return;
+        const items = await r.json();
+        const item = items.find(function(i) { return i.id === savedId; });
+        if (item) await selectFromLibrary(savedId, item);
+      } catch (e) { /* ignore */ }
+    })();
   </script>
 </body>
 </html>

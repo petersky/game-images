@@ -38,7 +38,9 @@ class FalProvider:
     def __init__(self, *, api_key: str | None = None) -> None:
         self._api_key = api_key or os.environ.get("FAL_KEY")
         if not self._api_key:
-            raise ValueError("FAL_KEY must be set or passed as api_key")
+            raise ValueError(
+                "Fal API key not set. Add it in Settings (gear icon) or set FAL_KEY."
+            )
 
     def _upload_image(self, image: bytes, suffix: str = ".png") -> str:
         import fal_client

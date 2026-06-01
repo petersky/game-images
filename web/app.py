@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile, Query
 from fastapi.responses import HTMLResponse, JSONResponse, Response
+from pydantic import BaseModel
 from PIL import Image
 
 app = FastAPI(title="Game Images AI")
@@ -363,6 +364,30 @@ async def library_from_result(
     return {"id": img_id, "metadata": meta}
 
 
+class KeysUpdateBody(BaseModel):
+    """Update stored API keys. Omit a field to leave it unchanged; use empty string to remove."""
+
+    openai_api_key: str | None = None
+    fal_api_key: str | None = None
+
+
+@app.get("/settings/keys")
+async def settings_keys_get() -> dict:
+    from game_images.settings import keys_status
+
+    return keys_status()
+
+
+@app.put("/settings/keys")
+async def settings_keys_put(body: KeysUpdateBody) -> dict:
+    from game_images.settings import update_keys
+
+    return update_keys(
+        openai_api_key=body.openai_api_key,
+        fal_api_key=body.fal_api_key,
+    )
+
+
 @app.get("/health")
 async def health() -> dict:
-    return {"status": "ok"}
+    return {"status": "ok", "app": "game-images"}

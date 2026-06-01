@@ -10,11 +10,18 @@ from typing import Literal
 
 from PIL import Image
 
+from game_images.settings import get_fal_api_key, get_openai_api_key
+
 ProviderName = Literal["openai", "fal"]
 
 # OpenAI generation sizes (pick closest, then resize)
 _OPENAI_DALLE3_SIZES = ((1024, 1024), (1792, 1024), (1024, 1792))
 _OPENAI_DALLE2_SIZES = ((256, 256), (512, 512), (1024, 1024))
+_GPT_IMAGE_SIZES = ((1024, 1024), (1024, 1536), (1536, 1024))
+
+
+def _is_gpt_image_model(model: str) -> bool:
+    return model.startswith("gpt-image")
 
 
 def _resize_to_png(image_bytes: bytes, width: int, height: int) -> bytes:
@@ -68,7 +75,9 @@ def create_image_openai(
 
     key = api_key or os.environ.get("OPENAI_API_KEY")
     if not key:
-        raise ValueError("OPENAI_API_KEY must be set")
+        raise ValueError(
+            "OpenAI API key not set. Add it in Settings (gear icon) or set OPENAI_API_KEY."
+        )
     model = model or os.environ.get("OPENAI_IMAGE_MODEL") or "dall-e-3"
     client = OpenAI(api_key=key)
     w = max(64, min(2048, width))
@@ -83,10 +92,19 @@ def create_image_openai(
             n=1,
             response_format="b64_json",
         )
+    elif _is_gpt_image_model(model):
+        # GPT image models always return base64; response_format is not supported.
+        size = _nearest_size(w, h, _GPT_IMAGE_SIZES)
+        resp = client.images.generate(
+            model=model,
+            prompt=prompt,
+            size=size,  # type: ignore[arg-type]
+            n=1,
+        )
     else:
         size = _nearest_size(w, h, _OPENAI_DALLE2_SIZES)
         resp = client.images.generate(
-            model="dall-e-2" if model == "dall-e-2" else model,
+            model="dall-e-2",
             prompt=prompt,
             size=size,  # type: ignore[arg-type]
             n=1,
@@ -107,7 +125,9 @@ def create_image_fal(
 
     key = api_key or os.environ.get("FAL_KEY")
     if not key:
-        raise ValueError("FAL_KEY must be set")
+        raise ValueError(
+            "Fal API key not set. Add it in Settings (gear icon) or set FAL_KEY."
+        )
     w = max(64, min(2048, width))
     h = max(64, min(2048, height))
     result = fal_client.subscribe(
@@ -141,7 +161,9 @@ def create_image(
     if not prompt.strip():
         raise ValueError("Prompt is required")
     if provider_name == "openai":
-        return create_image_openai(prompt, width, height, model=model)
+        return create_image_openai(
+            prompt, width, height, model=model, api_key=get_openai_api_key()
+        )
     if provider_name == "fal":
-        return create_image_fal(prompt, width, height)
+        return create_image_fal(prompt, width, height, api_key=get_fal_api_key())
     raise ValueError(f"Unknown provider: {provider_name}")

@@ -69,7 +69,9 @@ class OpenAIProvider:
         self._api_key = api_key or os.environ.get("OPENAI_API_KEY")
         self._model = model or os.environ.get("OPENAI_IMAGE_MODEL") or "dall-e-2"
         if not self._api_key:
-            raise ValueError("OPENAI_API_KEY must be set or passed as api_key")
+            raise ValueError(
+                "OpenAI API key not set. Add it in Settings (gear icon) or set OPENAI_API_KEY."
+            )
 
     def _client(self):
         from openai import OpenAI

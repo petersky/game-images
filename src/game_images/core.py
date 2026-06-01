@@ -11,6 +11,7 @@ from game_images.image_ops import tile_image as _tile_image
 from game_images.providers.base import Direction, Provider
 from game_images.providers.fal_provider import FalProvider
 from game_images.providers.openai_provider import OpenAIProvider
+from game_images.settings import get_fal_api_key, get_openai_api_key
 from game_images.texture_maps import generate_texture_map as _generate_texture_map
 
 ProviderName = Literal["openai", "fal"]
@@ -25,8 +26,10 @@ def get_provider(name: ProviderName, *, model: str | None = None) -> Provider:
     cls = _PROVIDERS.get(name)
     if cls is None:
         raise ValueError(f"Unknown provider: {name}. Choose from: {list(_PROVIDERS)}")
-    if name == "openai" and model is not None:
-        return OpenAIProvider(model=model)
+    if name == "openai":
+        return OpenAIProvider(model=model, api_key=get_openai_api_key())
+    if name == "fal":
+        return FalProvider(api_key=get_fal_api_key())
     return cls()
 
 
