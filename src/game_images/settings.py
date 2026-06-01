@@ -14,6 +14,8 @@ _SETTINGS_FILENAME = "settings.json"
 _KEY_OPENAI = "openai_api_key"
 _KEY_OPENAI_OAUTH = "openai_oauth_token"
 _KEY_OPENAI_OAUTH_SESSION = "openai_oauth_session"
+_KEY_OPENAI_AUTH_MODE = "openai_auth_mode"
+OpenAiAuthMode = str  # "auto" | "api_key" | "oauth"
 _KEY_FAL = "fal_api_key"
 _KEY_GEMINI = "gemini_api_key"
 _KEY_MINIMAX = "minimax_api_key"
@@ -78,12 +80,42 @@ def clear_openai_oauth_session() -> None:
     _save_raw(data)
 
 
-def get_openai_oauth_access_token() -> str | None:
-    """Return a valid OAuth access token, refreshing when expired."""
+def get_openai_auth_mode() -> str:
+    """How to choose between API key and OAuth when both are available."""
+    mode = (_load_raw().get(_KEY_OPENAI_AUTH_MODE) or "auto").strip().lower()
+    if mode not in ("auto", "api_key", "oauth"):
+        return "auto"
+    return mode
+
+
+def set_openai_auth_mode(mode: str) -> str:
+    normalized = (mode or "auto").strip().lower()
+    if normalized not in ("auto", "api_key", "oauth"):
+        raise ValueError("openai_auth_mode must be auto, api_key, or oauth")
+    data = _load_raw()
+    data[_KEY_OPENAI_AUTH_MODE] = normalized
+    _save_raw(data)
+    return normalized
+
+
+def _env_openai_oauth_token() -> str | None:
     for env_name in ("OPENAI_OAUTH_TOKEN", "OPENAI_ACCESS_TOKEN"):
         env = os.environ.get(env_name, "").strip()
         if env:
             return env
+    return None
+
+
+def get_openai_oauth_access_token() -> str | None:
+    """Return a valid OAuth access token, refreshing when expired."""
+    env = _env_openai_oauth_token()
+    if env:
+        return env
+    return get_stored_openai_oauth_access_token()
+
+
+def get_stored_openai_oauth_access_token() -> str | None:
+    """OAuth from settings/session only (no environment variables)."""
     session = get_openai_oauth_session()
     if not session:
         legacy = (_load_raw().get(_KEY_OPENAI_OAUTH) or "").strip()
@@ -105,18 +137,71 @@ def get_openai_oauth_access_token() -> str | None:
         return access if int(expires_at) > int(time.time()) else None
 
 
-def get_openai_credential() -> str | None:
-    """OpenAI API key or OAuth access token. Env vars win over stored settings."""
-    env_key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if env_key:
-        return env_key
-    stored_key = (_load_raw().get(_KEY_OPENAI) or "").strip()
-    if stored_key:
-        return stored_key
-    oauth = get_openai_oauth_access_token()
-    if oauth:
+def _pick_openai_credential(
+    *,
+    api_key: str | None,
+    oauth: str | None,
+    mode: str,
+) -> str | None:
+    if api_key and not oauth:
+        return api_key
+    if oauth and not api_key:
         return oauth
-    return None
+    if not api_key and not oauth:
+        return None
+    if mode == "oauth":
+        return oauth
+    if mode == "api_key":
+        return api_key
+    return api_key  # auto: prefer API key
+
+
+def is_openai_platform_api_key(credential: str) -> bool:
+    """True for platform.openai.com API keys (sk-…), not ChatGPT OAuth JWTs."""
+    return (credential or "").strip().startswith("sk-")
+
+
+OPENAI_IMAGES_NEED_API_KEY_MSG = (
+    "OpenAI image generation (Create, Extend, Manipulate) requires a platform API key "
+    "from https://platform.openai.com/api-keys. ChatGPT sign-in (OAuth) does not grant "
+    "the Images API scope (api.model.images.request), even though images work on "
+    "chatgpt.com. In Settings, set \"Use for OpenAI requests\" to API key only and save "
+    "your key."
+)
+
+OPENAI_IMAGES_API_OAUTH_NOTE = (
+    "Create, Extend, and Manipulate need a platform API key (sk-…), not ChatGPT "
+    "sign-in. OAuth tokens lack api.model.images.request; chatgpt.com uses a different "
+    "service."
+)
+
+
+def validate_openai_images_credential(credential: str | None = None) -> str:
+    """Return a credential suitable for the OpenAI Images API or raise ValueError."""
+    cred = (credential if credential is not None else get_openai_credential()) or ""
+    cred = cred.strip()
+    if not cred:
+        raise ValueError(
+            "OpenAI credentials not set. Add a platform API key in Settings "
+            "(https://platform.openai.com/api-keys) or set OPENAI_API_KEY."
+        )
+    if not is_openai_platform_api_key(cred):
+        raise ValueError(OPENAI_IMAGES_NEED_API_KEY_MSG)
+    return cred
+
+
+def get_openai_credential() -> str | None:
+    """OpenAI API key or OAuth access token, respecting auth mode preference."""
+    mode = get_openai_auth_mode()
+    env_key = os.environ.get("OPENAI_API_KEY", "").strip() or None
+    env_oauth = _env_openai_oauth_token()
+    if env_key or env_oauth:
+        picked = _pick_openai_credential(api_key=env_key, oauth=env_oauth, mode=mode)
+        if picked:
+            return picked
+    stored_key = (_load_raw().get(_KEY_OPENAI) or "").strip() or None
+    stored_oauth = get_stored_openai_oauth_access_token()
+    return _pick_openai_credential(api_key=stored_key, oauth=stored_oauth, mode=mode)
 
 
 def get_openai_api_key() -> str | None:
@@ -125,35 +210,40 @@ def get_openai_api_key() -> str | None:
 
 
 def openai_active_auth() -> str | None:
-    """Which credential OpenAI requests use (matches get_openai_credential precedence)."""
-    if os.environ.get("OPENAI_API_KEY", "").strip():
+    """Which credential OpenAI requests use (matches get_openai_credential)."""
+    cred = get_openai_credential()
+    if not cred:
+        return None
+    env_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    env_oauth = _env_openai_oauth_token()
+    if env_key and cred == env_key:
         return "api_key_env"
-    if (_load_raw().get(_KEY_OPENAI) or "").strip():
-        return "api_key_stored"
-    if os.environ.get("OPENAI_OAUTH_TOKEN", "").strip() or os.environ.get(
-        "OPENAI_ACCESS_TOKEN", ""
-    ).strip():
+    if env_oauth and cred == env_oauth:
         return "oauth_env"
+    stored_key = (_load_raw().get(_KEY_OPENAI) or "").strip()
+    if stored_key and cred == stored_key:
+        return "api_key_stored"
     if get_openai_oauth_session():
         return "oauth_session"
     if (_load_raw().get(_KEY_OPENAI_OAUTH) or "").strip():
         return "oauth_stored"
-    return None
+    if get_stored_openai_oauth_access_token() and cred == get_stored_openai_oauth_access_token():
+        return "oauth_session"
+    return "oauth_session" if get_openai_oauth_session() else "oauth_stored"
 
 
 def openai_auth_status() -> dict[str, Any]:
     """How OpenAI auth is configured (for settings UI; never returns raw secrets)."""
     env_key = os.environ.get("OPENAI_API_KEY", "").strip()
-    env_oauth = (
-        os.environ.get("OPENAI_OAUTH_TOKEN", "").strip()
-        or os.environ.get("OPENAI_ACCESS_TOKEN", "").strip()
-    )
+    env_oauth = _env_openai_oauth_token() or ""
     raw = _load_raw()
     stored_key = (raw.get(_KEY_OPENAI) or "").strip()
     stored_oauth = (raw.get(_KEY_OPENAI_OAUTH) or "").strip()
     session = get_openai_oauth_session()
     oauth_via_session = bool(session and session.get("access_token"))
+    mode = get_openai_auth_mode()
     base: dict[str, Any] = {
+        "auth_mode": mode,
         "api_key_stored": bool(stored_key),
         "api_key_hint": mask_secret(stored_key),
         "oauth_stored": oauth_via_session or bool(stored_oauth),
@@ -162,6 +252,8 @@ def openai_auth_status() -> dict[str, Any]:
         ),
         "oauth_session": oauth_via_session,
         "oauth_account_id": (session or {}).get("account_id"),
+        "has_api_key": bool(env_key or stored_key),
+        "has_oauth": bool(env_oauth or oauth_via_session or stored_oauth),
     }
     if env_key:
         return {
@@ -221,11 +313,29 @@ _ACTIVE_AUTH_LABELS = {
 }
 
 
+_AUTH_MODE_LABELS = {
+    "auto": "Automatic (prefer API key when both are set)",
+    "api_key": "Always use API key",
+    "oauth": "Always use OAuth",
+}
+
+
 def enrich_openai_auth_status(status: dict[str, Any]) -> dict[str, Any]:
     active = openai_active_auth()
     out = dict(status)
     out["active_auth"] = active
     out["active_auth_label"] = _ACTIVE_AUTH_LABELS.get(active, "") if active else ""
+    mode = out.get("auth_mode", "auto")
+    out["auth_mode_label"] = _AUTH_MODE_LABELS.get(mode, mode)
+    if active and active.startswith("oauth"):
+        out["oauth_supports_images_api"] = False
+        out["images_api_note"] = OPENAI_IMAGES_API_OAUTH_NOTE
+    elif active and active.startswith("api_key"):
+        out["oauth_supports_images_api"] = True
+        out["images_api_note"] = ""
+    else:
+        out["oauth_supports_images_api"] = None
+        out["images_api_note"] = ""
     return out
 
 
@@ -297,12 +407,18 @@ def update_keys(
     *,
     openai_api_key: str | None = None,
     openai_oauth_token: str | None = None,
+    openai_auth_mode: str | None = None,
     fal_api_key: str | None = None,
     gemini_api_key: str | None = None,
     minimax_api_key: str | None = None,
 ) -> dict[str, Any]:
     """Update stored keys. Pass None to leave unchanged, '' to remove stored value."""
     data = _load_raw()
+    if openai_auth_mode is not None:
+        mode = (openai_auth_mode or "auto").strip().lower()
+        if mode not in ("auto", "api_key", "oauth"):
+            raise ValueError("openai_auth_mode must be auto, api_key, or oauth")
+        data[_KEY_OPENAI_AUTH_MODE] = mode
     if openai_api_key is not None:
         if openai_api_key.strip():
             data[_KEY_OPENAI] = openai_api_key.strip()

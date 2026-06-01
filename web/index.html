@@ -844,7 +844,16 @@
         <h3>API keys</h3>
         <p class="helpText">Keys are saved locally in your Game Images data folder. Environment variables override stored values when set.</p>
         <div class="keyRow">
+          <h4 style="margin: 0 0 0.5rem 0; font-size: 0.9375rem;">OpenAI</h4>
           <p id="openaiActiveAuth" class="keyStatus" style="color: var(--accent); font-weight: 600;"></p>
+          <label for="openaiAuthMode">Use for OpenAI requests</label>
+          <select id="openaiAuthMode">
+            <option value="auto">Automatic (prefer API key)</option>
+            <option value="api_key">API key only</option>
+            <option value="oauth">OAuth only</option>
+          </select>
+          <p id="openaiAuthModeHint" class="helpText"></p>
+          <p id="openaiImagesApiWarning" class="helpText" style="display: none; color: #c9a227;"></p>
           <label for="openaiKeyInput">OpenAI API key</label>
           <p id="openaiKeyStatus" class="keyStatus"></p>
           <input type="password" id="openaiKeyInput" autocomplete="off" spellcheck="false" placeholder="sk-…" />
@@ -865,7 +874,7 @@
               <button type="button" id="openaiOauthSaveBtn">Save token</button>
             </div>
           </details>
-          <p class="helpText">Sign in uses the ChatGPT/Codex OAuth flow (browser login, callback on port 1455). API key env var still takes precedence. If port 1455 is in use, stop Codex/other tools or set <code>GAME_IMAGES_OPENAI_USE_APP_REDIRECT=1</code>.</p>
+          <p class="helpText">Create, Extend, and Manipulate require a platform API key (sk-…), not ChatGPT sign-in. Sign-in is stored for future use but cannot call the Images API today. Choose API key mode when both are configured. Sign-in uses port 1455 (see README if the callback fails).</p>
         </div>
         <div class="keyRow">
           <label for="geminiKeyInput">Gemini API key (Nano Banana)</label>
@@ -1357,11 +1366,32 @@
       function renderOpenaiAuth(info) {
         if (!info) return;
         const activeEl = document.getElementById('openaiActiveAuth');
+        const modeSel = document.getElementById('openaiAuthMode');
+        const modeHint = document.getElementById('openaiAuthModeHint');
+        modeSel.value = info.auth_mode || 'auto';
+        if (!info.has_api_key && info.auth_mode === 'api_key') {
+          modeHint.textContent = 'Save an API key or switch mode — OAuth is required for requests.';
+        } else if (!info.has_oauth && info.auth_mode === 'oauth') {
+          modeHint.textContent = 'Sign in with OpenAI or switch mode — an API key is required for requests.';
+        } else {
+          modeHint.textContent = info.auth_mode_label || '';
+        }
+        modeSel.disabled = info.from_env;
+        const imagesWarn = document.getElementById('openaiImagesApiWarning');
+        if (info.oauth_supports_images_api === false) {
+          imagesWarn.textContent = info.images_api_note || (
+            'Create, Extend, and Manipulate need a platform API key (sk-…), not ChatGPT sign-in.'
+          );
+          imagesWarn.style.display = 'block';
+        } else {
+          imagesWarn.style.display = 'none';
+          imagesWarn.textContent = '';
+        }
         if (info.active_auth_label) {
           activeEl.textContent = 'In use for OpenAI requests: ' + info.active_auth_label;
           activeEl.style.display = 'block';
         } else {
-          activeEl.textContent = 'No OpenAI credentials configured.';
+          activeEl.textContent = 'No OpenAI credentials configured for the selected mode.';
           activeEl.style.display = 'block';
         }
         const keyInput = document.getElementById('openaiKeyInput');
@@ -1405,8 +1435,10 @@
         const oauthActive = info.active_auth && info.active_auth.indexOf('oauth') === 0;
         if (keyActive) {
           keyStatus.textContent = 'In use — ' + keyStatus.textContent;
-        } else if (info.api_key_stored) {
-          keyStatus.textContent = 'Saved (not in use — OAuth or env takes precedence): ' + info.api_key_hint;
+        } else if (info.api_key_stored && info.auth_mode === 'oauth') {
+          keyStatus.textContent = 'Saved (not used while mode is OAuth): ' + info.api_key_hint;
+        } else if (info.api_key_stored && info.auth_mode === 'auto') {
+          keyStatus.textContent = 'Saved (not in use — OAuth selected by mode or missing): ' + info.api_key_hint;
         }
         oauthStatus.textContent = info.oauth_stored ? 'Saved: ' + info.oauth_hint : 'Not set';
         oauthRemove.disabled = !info.oauth_stored;
@@ -1417,8 +1449,20 @@
         }
         if (oauthActive) {
           oauthStatus.textContent = 'In use — ' + oauthStatus.textContent;
-        } else if (info.oauth_stored && !oauthActive) {
-          oauthStatus.textContent = 'Saved (not in use — API key takes precedence): ' + (info.oauth_hint || '…');
+        } else if (info.oauth_stored && info.auth_mode === 'api_key') {
+          oauthStatus.textContent = 'Saved (not used while mode is API key): ' + (info.oauth_hint || '…');
+        } else if (info.oauth_stored && !oauthActive && info.auth_mode === 'auto') {
+          oauthStatus.textContent = 'Saved (not in use — API key preferred): ' + (info.oauth_hint || '…');
+        }
+      }
+
+      async function saveOpenAiAuthMode() {
+        const mode = document.getElementById('openaiAuthMode').value;
+        try {
+          await putKeys({ openai_auth_mode: mode });
+          await loadKeysStatus();
+        } catch (err) {
+          showSettingsError(errorInfoFromThrown(err));
         }
       }
 
@@ -1590,6 +1634,7 @@
       }
 
       bindKeySave('openai', 'OpenAI');
+      document.getElementById('openaiAuthMode').addEventListener('change', saveOpenAiAuthMode);
       document.getElementById('openaiOauthSignInBtn').addEventListener('click', startOpenAiOAuthSignIn);
       document.getElementById('openaiOauthRemoveBtn').addEventListener('click', async function() {
         try {

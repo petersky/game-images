@@ -390,6 +390,7 @@ class KeysUpdateBody(BaseModel):
 
     openai_api_key: str | None = None
     openai_oauth_token: str | None = None
+    openai_auth_mode: str | None = None
     fal_api_key: str | None = None
     gemini_api_key: str | None = None
     minimax_api_key: str | None = None
@@ -409,6 +410,7 @@ async def settings_keys_put(body: KeysUpdateBody) -> dict:
     return update_keys(
         openai_api_key=body.openai_api_key,
         openai_oauth_token=body.openai_oauth_token,
+        openai_auth_mode=body.openai_auth_mode,
         fal_api_key=body.fal_api_key,
         gemini_api_key=body.gemini_api_key,
         minimax_api_key=body.minimax_api_key,

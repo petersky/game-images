@@ -27,6 +27,19 @@ def test_gemini_quota_exhausted() -> None:
     assert "8 seconds" in body["message"] or "billing" in body["message"].lower()
 
 
+def test_openai_oauth_missing_image_scope() -> None:
+    raw = (
+        "Error code: 401 - {'error': {'message': "
+        "'You have insufficient permissions for this operation. Missing scopes: "
+        "api.model.images.request. Check that you have the correct role', "
+        "'type': 'invalid_request_error', 'param': None, 'code': None}}"
+    )
+    body = format_exception(Exception(raw))
+    assert "Images API" in body["summary"]
+    assert "platform.openai.com/api-keys" in body["message"]
+    assert body["status"] == 401
+
+
 def test_value_error() -> None:
     body = format_exception(ValueError("Prompt is required"))
     assert body["summary"] == "Invalid request"

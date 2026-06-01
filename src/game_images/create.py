@@ -12,7 +12,11 @@ from PIL import Image
 
 from game_images.gemini_image import create_image_gemini
 from game_images.minimax_image import create_image_minimax
-from game_images.settings import get_fal_api_key, get_openai_credential
+from game_images.settings import (
+    get_fal_api_key,
+    get_openai_credential,
+    validate_openai_images_credential,
+)
 
 ProviderName = Literal["openai", "fal", "gemini", "minimax"]
 
@@ -104,11 +108,9 @@ def create_image_openai(
 ) -> bytes:
     from openai import OpenAI
 
-    key = api_key or os.environ.get("OPENAI_API_KEY")
-    if not key:
-        raise ValueError(
-            "OpenAI API key not set. Add it in Settings (gear icon) or set OPENAI_API_KEY."
-        )
+    key = validate_openai_images_credential(
+        api_key if api_key is not None else get_openai_credential()
+    )
     model = (
         model or os.environ.get("OPENAI_IMAGE_MODEL") or DEFAULT_OPENAI_CREATE_MODEL
     ).strip()

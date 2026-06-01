@@ -14,7 +14,7 @@ pip install -e .
 
 **Environment variables** override stored keys (useful for CI or shells):
 
-- **OpenAI**: `OPENAI_API_KEY` (preferred), or **Sign in with OpenAI** in Settings (ChatGPT/Codex OAuth — opens browser, captures token on callback). Uses `http://localhost:1455/auth/callback` like Codex CLI. Set `GAME_IMAGES_OPENAI_USE_APP_REDIRECT=1` to use your serve port instead. Manual `OPENAI_OAUTH_TOKEN` still works.
+- **OpenAI**: API key and/or **Sign in with OpenAI** (OAuth). In Settings, choose **Use for OpenAI requests**: Automatic (prefer API key), API key only, or OAuth only. Environment variables apply to the selected type when set. OAuth callback uses `http://localhost:1455/auth/callback` by default.
 - **Gemini** (Nano Banana image models): `GEMINI_API_KEY` or `GOOGLE_API_KEY`
 - **MiniMax** (image generation): `MINIMAX_API_KEY`
 - **Fal**: `FAL_KEY`

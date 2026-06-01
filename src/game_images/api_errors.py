@@ -112,6 +112,11 @@ def _friendly_summary(
         if provider == "gemini":
             return "Gemini rate or quota limit reached"
         return "Rate or quota limit reached"
+    if (
+        "api.model.images.request" in text
+        or "missing scopes" in text
+    ):
+        return "ChatGPT sign-in cannot use Images API"
     if http_status in (401, 403) or "invalid api key" in text or "incorrect api key" in text:
         return "API key rejected"
     if http_status == 400 and provider == "openai":
@@ -160,6 +165,13 @@ def _friendly_message(
         hints.append("Too many requests. Wait a moment and try again.")
         if text:
             hints.append(text.split("\n")[0].strip())
+    elif "api.model.images.request" in text.lower() or "missing scopes" in text.lower():
+        hints.append(
+            "ChatGPT sign-in (OAuth) does not include access to the OpenAI Images API "
+            "(scope api.model.images.request). Images on chatgpt.com use a different "
+            "service. Use a platform API key from https://platform.openai.com/api-keys. "
+            'In Settings, set "Use for OpenAI requests" to API key only and save your key.'
+        )
     elif http_status in (401, 403):
         hints.append("Check the API key in Settings (gear icon) or your environment variables.")
     elif message:

@@ -81,6 +81,8 @@ def test_openai_oauth_session(settings_file: Path, monkeypatch: pytest.MonkeyPat
 def test_openai_api_key_over_oauth(
     settings_file: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_OAUTH_TOKEN", raising=False)
     settings_mod.save_openai_oauth_session(
         {
             "access_token": "oauth-access",
@@ -89,9 +91,38 @@ def test_openai_api_key_over_oauth(
         }
     )
     settings_mod.update_keys(openai_api_key="sk-stored-key")
-    assert settings_mod.openai_active_auth() == "api_key_stored"
-    status = settings_mod.keys_status()["openai"]
-    assert status["active_auth"] == "api_key_stored"
-    assert "API key" in status["active_auth_label"]
+    assert settings_mod.get_openai_credential() == "sk-stored-key"
+    settings_mod.update_keys(openai_auth_mode="oauth")
+    assert settings_mod.get_openai_credential() == "oauth-access"
+    assert settings_mod.openai_active_auth() == "oauth_session"
+    settings_mod.update_keys(openai_auth_mode="api_key")
+    assert settings_mod.get_openai_credential() == "sk-stored-key"
     monkeypatch.setenv("OPENAI_API_KEY", "sk-env-key")
-    assert settings_mod.openai_active_auth() == "api_key_env"
+    assert settings_mod.get_openai_credential() == "sk-env-key"
+
+
+def test_validate_openai_images_rejects_oauth(
+    settings_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    settings_mod.update_keys(openai_auth_mode="oauth", openai_oauth_token="eyJ.fake.jwt")
+    with pytest.raises(ValueError, match="api.model.images.request"):
+        settings_mod.validate_openai_images_credential()
+
+
+def test_validate_openai_images_accepts_api_key(
+    settings_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    settings_mod.update_keys(openai_api_key="sk-valid-key")
+    assert settings_mod.validate_openai_images_credential() == "sk-valid-key"
+
+
+def test_enrich_openai_auth_oauth_images_note(
+    settings_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    settings_mod.update_keys(openai_auth_mode="oauth", openai_oauth_token="eyJ.fake.jwt")
+    status = settings_mod.keys_status()["openai"]
+    assert status["oauth_supports_images_api"] is False
+    assert "api.model.images.request" in status["images_api_note"]
