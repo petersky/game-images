@@ -14,6 +14,10 @@ from game_images.settings import get_fal_api_key, get_openai_api_key
 
 ProviderName = Literal["openai", "fal"]
 
+DEFAULT_OPENAI_CREATE_MODEL = "gpt-image-1.5"
+FALLBACK_OPENAI_CREATE_MODEL = "gpt-image-1.5"
+_LEGACY_DALLE_PREFIX = "dall-e"
+
 # OpenAI generation sizes (pick closest, then resize)
 _OPENAI_DALLE3_SIZES = ((1024, 1024), (1792, 1024), (1024, 1792))
 _OPENAI_DALLE2_SIZES = ((256, 256), (512, 512), (1024, 1024))
@@ -22,6 +26,17 @@ _GPT_IMAGE_SIZES = ((1024, 1024), (1024, 1536), (1536, 1024))
 
 def _is_gpt_image_model(model: str) -> bool:
     return model.startswith("gpt-image")
+
+
+def _is_legacy_dalle_model(model: str) -> bool:
+    return model.startswith(_LEGACY_DALLE_PREFIX)
+
+
+def _openai_model_not_found(exc: BaseException) -> bool:
+    msg = str(exc).lower()
+    return "does not exist" in msg or (
+        "invalid_value" in msg and "model" in msg
+    )
 
 
 def _resize_to_png(image_bytes: bytes, width: int, height: int) -> bytes:
@@ -63,6 +78,20 @@ def _download_openai_first(resp) -> bytes:
     raise RuntimeError("OpenAI response had no b64_json or url")
 
 
+def _api_model_and_size(model: str, width: int, height: int) -> tuple[str, str]:
+    """Map a logical model id to API model name and size parameter."""
+    if model.startswith("dall-e-3"):
+        return "dall-e-3", _nearest_size(width, height, _OPENAI_DALLE3_SIZES)  # type: ignore[return-value]
+    if _is_gpt_image_model(model):
+        return model, _nearest_size(width, height, _GPT_IMAGE_SIZES)  # type: ignore[return-value]
+    if model == "dall-e-2" or model.startswith("dall-e-2"):
+        return "dall-e-2", _nearest_size(width, height, _OPENAI_DALLE2_SIZES)  # type: ignore[return-value]
+    raise ValueError(
+        f"Unknown OpenAI image model: {model!r}. "
+        "Use gpt-image-1.5, gpt-image-1, gpt-image-1-mini, or legacy dall-e-2 / dall-e-3."
+    )
+
+
 def create_image_openai(
     prompt: str,
     width: int,
@@ -78,40 +107,43 @@ def create_image_openai(
         raise ValueError(
             "OpenAI API key not set. Add it in Settings (gear icon) or set OPENAI_API_KEY."
         )
-    model = model or os.environ.get("OPENAI_IMAGE_MODEL") or "dall-e-3"
+    model = (
+        model or os.environ.get("OPENAI_IMAGE_MODEL") or DEFAULT_OPENAI_CREATE_MODEL
+    ).strip()
     client = OpenAI(api_key=key)
     w = max(64, min(2048, width))
     h = max(64, min(2048, height))
 
-    if model.startswith("dall-e-3"):
-        size = _nearest_size(w, h, _OPENAI_DALLE3_SIZES)
-        resp = client.images.generate(
-            model="dall-e-3",
-            prompt=prompt,
-            size=size,  # type: ignore[arg-type]
-            n=1,
-            response_format="b64_json",
-        )
-    elif _is_gpt_image_model(model):
-        # GPT image models always return base64; response_format is not supported.
-        size = _nearest_size(w, h, _GPT_IMAGE_SIZES)
-        resp = client.images.generate(
-            model=model,
-            prompt=prompt,
-            size=size,  # type: ignore[arg-type]
-            n=1,
-        )
-    else:
-        size = _nearest_size(w, h, _OPENAI_DALLE2_SIZES)
-        resp = client.images.generate(
-            model="dall-e-2",
-            prompt=prompt,
-            size=size,  # type: ignore[arg-type]
-            n=1,
-            response_format="b64_json",
-        )
-    raw = _download_openai_first(resp)
-    return _resize_to_png(raw, w, h)
+    models_to_try: list[str] = [model]
+    if (
+        _is_legacy_dalle_model(model)
+        and FALLBACK_OPENAI_CREATE_MODEL not in models_to_try
+    ):
+        models_to_try.append(FALLBACK_OPENAI_CREATE_MODEL)
+
+    last_error: BaseException | None = None
+    for attempt_model in models_to_try:
+        try:
+            api_model, size = _api_model_and_size(attempt_model, w, h)
+            # Do not pass response_format; GPT Image models reject it, and many
+            # accounts no longer expose DALL·E. _download_openai_first handles
+            # b64_json (GPT Image) or url (legacy DALL·E).
+            resp = client.images.generate(
+                model=api_model,
+                prompt=prompt,
+                size=size,  # type: ignore[arg-type]
+                n=1,
+            )
+            raw = _download_openai_first(resp)
+            return _resize_to_png(raw, w, h)
+        except Exception as e:
+            if _openai_model_not_found(e) and attempt_model != models_to_try[-1]:
+                last_error = e
+                continue
+            raise
+    if last_error:
+        raise last_error
+    raise RuntimeError("OpenAI image generation failed")
 
 
 def create_image_fal(

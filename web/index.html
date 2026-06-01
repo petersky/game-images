@@ -529,12 +529,13 @@
           <div id="modelRowCreate">
             <label for="openaiModelCreate">Model (OpenAI)</label>
             <select name="modelCreate" id="openaiModelCreate">
-              <option value="dall-e-3">DALL·E 3</option>
-              <option value="dall-e-2">DALL·E 2</option>
-              <option value="gpt-image-1.5">GPT Image 1.5</option>
+              <option value="gpt-image-1.5" selected>GPT Image 1.5 (recommended)</option>
               <option value="gpt-image-1">GPT Image 1</option>
               <option value="gpt-image-1-mini">GPT Image 1 Mini</option>
+              <option value="dall-e-3">DALL·E 3 (legacy)</option>
+              <option value="dall-e-2">DALL·E 2 (legacy)</option>
             </select>
+            <p class="helpText">OpenAI is retiring DALL·E models; use GPT Image if generation fails.</p>
           </div>
                 <p class="helpText">Generates a new image and sets it as the active image. Open Edit to refine it.</p>
               </section>
@@ -657,10 +658,10 @@
           <div id="modelRow">
             <label for="openaiModel">Model (OpenAI)</label>
             <select name="model" id="openaiModel">
-              <option value="dall-e-2">DALL·E 2</option>
-              <option value="gpt-image-1.5">GPT Image 1.5</option>
+              <option value="gpt-image-1.5" selected>GPT Image 1.5</option>
               <option value="gpt-image-1">GPT Image 1</option>
               <option value="gpt-image-1-mini">GPT Image 1 Mini</option>
+              <option value="dall-e-2">DALL·E 2 (legacy)</option>
             </select>
           </div>
                 </section>
@@ -693,10 +694,10 @@
           <div id="modelRowManipulate">
             <label for="openaiModelManipulate">Model (OpenAI)</label>
             <select name="modelManipulate" id="openaiModelManipulate">
-              <option value="dall-e-2">DALL·E 2</option>
-              <option value="gpt-image-1.5">GPT Image 1.5</option>
+              <option value="gpt-image-1.5" selected>GPT Image 1.5</option>
               <option value="gpt-image-1">GPT Image 1</option>
               <option value="gpt-image-1-mini">GPT Image 1 Mini</option>
+              <option value="dall-e-2">DALL·E 2 (legacy)</option>
             </select>
           </div>
                 </section>

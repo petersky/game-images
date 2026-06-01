@@ -19,15 +19,17 @@ pip install -e .
 
 Do not commit `.env`, `settings.json`, or keys to the repo.
 
-### Using a different OpenAI image model
+### OpenAI image models
 
-The default model is `dall-e-2` (works on all accounts). To use newer GPT image models when your account has access:
+The default is **`gpt-image-1.5`**. OpenAI is retiring **DALL·E 2 / DALL·E 3** on the Images API; if you pick a legacy DALL·E model and the API rejects it, Create automatically retries with GPT Image 1.5.
+
+Override the default:
 
 ```bash
 export OPENAI_IMAGE_MODEL=gpt-image-1.5
 ```
 
-Other options: `gpt-image-1`, `gpt-image-1-mini`. These support non-square images, larger sizes, and often better quality. If you get an error like “Value must be 'dall-e-2'”, your account or region only has DALL·E 2; keep the default or omit `OPENAI_IMAGE_MODEL`.
+Other supported IDs: `gpt-image-1`, `gpt-image-1-mini`, and legacy `dall-e-2` / `dall-e-3` where still available.
 
 ## CLI
 
