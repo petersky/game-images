@@ -20,7 +20,7 @@ def test_is_gpt_image_model() -> None:
     assert not _is_gpt_image_model("dall-e-3")
 
 
-@patch("game_images.create.get_openai_api_key", return_value="sk-test")
+@patch("game_images.create.get_openai_credential", return_value="sk-test")
 def test_gpt_image_generate_omits_response_format(_mock_key: MagicMock) -> None:
     mock_client = MagicMock()
     mock_resp = MagicMock()
@@ -43,7 +43,7 @@ def test_gpt_image_generate_omits_response_format(_mock_key: MagicMock) -> None:
     assert "response_format" not in kwargs
 
 
-@patch("game_images.create.get_openai_api_key", return_value="sk-test")
+@patch("game_images.create.get_openai_credential", return_value="sk-test")
 def test_dalle3_generate_omits_response_format(_mock_key: MagicMock) -> None:
     mock_client = MagicMock()
     mock_resp = MagicMock()
@@ -66,7 +66,7 @@ def test_dalle3_generate_omits_response_format(_mock_key: MagicMock) -> None:
     assert "response_format" not in kwargs
 
 
-@patch("game_images.create.get_openai_api_key", return_value="sk-test")
+@patch("game_images.create.get_openai_credential", return_value="sk-test")
 def test_dalle3_falls_back_when_model_missing(_mock_key: MagicMock) -> None:
     mock_client = MagicMock()
     ok_resp = MagicMock()

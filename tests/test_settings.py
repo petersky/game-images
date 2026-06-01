@@ -51,3 +51,47 @@ def test_gemini_and_minimax_keys(settings_file: Path) -> None:
     status = settings_mod.keys_status()
     assert status["gemini"]["set"] is True
     assert status["minimax"]["set"] is True
+
+
+def test_openai_oauth_token(settings_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_OAUTH_TOKEN", raising=False)
+    settings_mod.update_keys(openai_oauth_token="oauth-token-value")
+    assert settings_mod.get_openai_credential() == "oauth-token-value"
+    status = settings_mod.keys_status()["openai"]
+    assert status["auth_method"] == "oauth"
+    assert status["oauth_stored"] is True
+
+
+def test_openai_oauth_session(settings_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    settings_mod.save_openai_oauth_session(
+        {
+            "access_token": "access-tok",
+            "refresh_token": "refresh-tok",
+            "expires_at": 9999999999,
+            "account_id": "acct-1",
+        }
+    )
+    assert settings_mod.get_openai_oauth_access_token() == "access-tok"
+    status = settings_mod.keys_status()["openai"]
+    assert status["oauth_session"] is True
+
+
+def test_openai_api_key_over_oauth(
+    settings_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings_mod.save_openai_oauth_session(
+        {
+            "access_token": "oauth-access",
+            "refresh_token": "oauth-refresh",
+            "expires_at": 9999999999,
+        }
+    )
+    settings_mod.update_keys(openai_api_key="sk-stored-key")
+    assert settings_mod.openai_active_auth() == "api_key_stored"
+    status = settings_mod.keys_status()["openai"]
+    assert status["active_auth"] == "api_key_stored"
+    assert "API key" in status["active_auth_label"]
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-env-key")
+    assert settings_mod.openai_active_auth() == "api_key_env"

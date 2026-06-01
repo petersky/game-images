@@ -32,6 +32,39 @@ def _save_png(img: Image.Image) -> bytes:
     return buf.getvalue()
 
 
+def _resize_image(
+    img: Image.Image,
+    *,
+    scale: float = 1.0,
+    width: int = 0,
+    height: int = 0,
+    keep_aspect: bool = True,
+) -> Image.Image:
+    """Resize after other transforms. scale=1 and no width/height means no change."""
+    w, h = img.size
+    if scale != 1.0:
+        if scale <= 0:
+            raise ValueError("resize scale must be positive")
+        new_w = max(1, int(round(w * scale)))
+        new_h = max(1, int(round(h * scale)))
+        return img.resize((new_w, new_h), resample=Image.Resampling.LANCZOS)
+
+    target_w = max(0, int(width))
+    target_h = max(0, int(height))
+    if target_w == 0 and target_h == 0:
+        return img
+    if target_w == 0:
+        target_w = max(1, int(round(w * (target_h / h))))
+    elif target_h == 0:
+        target_h = max(1, int(round(h * (target_w / w))))
+
+    if keep_aspect:
+        out = img.copy()
+        out.thumbnail((target_w, target_h), resample=Image.Resampling.LANCZOS)
+        return out
+    return img.resize((target_w, target_h), resample=Image.Resampling.LANCZOS)
+
+
 def adjust_image(
     image: bytes,
     *,
@@ -42,6 +75,10 @@ def adjust_image(
     blur_radius: float = 0.0,
     rotate_degrees: float = 0.0,
     flip: FlipMode = "none",
+    resize_scale: float = 1.0,
+    resize_width: int = 0,
+    resize_height: int = 0,
+    resize_keep_aspect: bool = True,
 ) -> bytes:
     """Apply Pillow-based adjustments. Factors of 1.0 leave that channel unchanged."""
     img = _to_rgba(image)
@@ -63,6 +100,13 @@ def adjust_image(
         img = ImageOps.flip(img)
     elif flip == "xy":
         img = ImageOps.flip(ImageOps.mirror(img))
+    img = _resize_image(
+        img,
+        scale=resize_scale,
+        width=resize_width,
+        height=resize_height,
+        keep_aspect=resize_keep_aspect,
+    )
     return _save_png(img)
 
 

@@ -112,7 +112,17 @@
     .topBarStatus .spinner { width: 18px; height: 18px; border-width: 2px; }
     .topBarActions { display: flex; align-items: center; gap: 0.5rem; }
     .topBarActions button { margin-top: 0; }
-    .topBarDownload { margin-top: 0; padding: 0.5rem 1rem; background: var(--accent); color: var(--bg); border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9375rem; }
+    .topBarActions .topBarDownload {
+      margin-top: 0;
+      padding: 0.5rem 1rem;
+      background: var(--accent);
+      color: var(--bg);
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9375rem;
+    }
+    .topBarActions .topBarDownload:hover { filter: brightness(1.1); color: var(--bg); }
     .appBody { display: flex; flex: 1; overflow: hidden; }
     .sidebar {
       width: 200px;
@@ -355,21 +365,39 @@
       margin-bottom: 1rem;
     }
     .libraryItem {
-      aspect-ratio: 1;
       border: 2px solid var(--border);
       border-radius: 6px;
       overflow: hidden;
       cursor: pointer;
       background: var(--bg);
+      display: flex;
+      flex-direction: column;
     }
     .libraryItem:hover { border-color: var(--accent); }
     .libraryItem.selected { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 2px; }
-    .libraryItem img {
+    .libraryItemThumb {
+      aspect-ratio: 1;
+      overflow: hidden;
+      flex: 1;
+      min-height: 0;
+    }
+    .libraryItemThumb img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
     }
+    .libraryItemName {
+      font-size: 0.6875rem;
+      padding: 0.2rem 0.35rem;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border-top: 1px solid var(--border);
+      line-height: 1.2;
+    }
+    .libraryItemName:hover { color: var(--text); }
     .libraryImportRow { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
     .libraryImportRow input[type="file"] { width: auto; margin-bottom: 0; }
     .activeImageBar {
@@ -475,7 +503,7 @@
     </div>
     <div class="topBarActions">
       <button type="button" id="topBarRunBtn" disabled>Run</button>
-      <a id="topBarDownloadLink" class="download topBarDownload" download="result.png" style="display: none;">Download</a>
+      <a id="topBarDownloadLink" class="topBarDownload" href="#" download="result.png" style="display: none;" aria-label="Download result image">Download</a>
     </div>
   </div>
 
@@ -488,6 +516,7 @@
         <span id="activeImageDims" class="activeImageDims"></span>
       </div>
       <div class="activeImageActions">
+        <button type="button" id="activeImageRenameBtn" class="secondary" disabled title="Rename library image">Rename</button>
         <button type="button" id="activeImageChangeBtn" class="secondary">Change…</button>
         <button type="button" id="activeImageClearBtn" class="secondary">Clear</button>
       </div>
@@ -516,10 +545,11 @@
           <label>Browse and select an image to edit</label>
           <div class="libraryImportRow">
             <button type="button" id="libraryImportBtn">Import…</button>
+            <button type="button" id="libraryRenameBtn" class="secondary" disabled title="Rename selected image">Rename…</button>
             <input type="file" name="libraryImport" id="libraryImportInput" accept="image/png,image/jpeg,image/webp" multiple style="display: none;" />
           </div>
           <div id="libraryGrid" class="libraryGrid libraryGridWide"></div>
-          <p class="helpText">Click a thumbnail to set the active image, then open Edit for adjustments. Use Create to generate a new image from a prompt.</p>
+          <p class="helpText">Click a thumbnail to set the active image. Double-click a name or use Rename to change the display filename. Open Edit for adjustments or Create for a new image.</p>
         </section>
       </div>
 
@@ -591,6 +621,26 @@
             <option value="y">Mirror Y</option>
             <option value="xy">Both</option>
           </select>
+          <h3 class="areaTitle" style="margin-top: 1.25rem; font-size: 1rem;">Resize</h3>
+          <p id="adjustSizeHint" class="helpText">Current size: —</p>
+          <label>Scale <span id="adjustScaleVal">100</span>%</label>
+          <input type="range" id="adjustScale" min="10" max="400" step="5" value="100" />
+          <label>Or target size (px, 0 = no change)</label>
+          <div class="row">
+            <div>
+              <label for="adjustWidth" style="margin-bottom: 0.15rem; font-size: 0.75rem;">Width</label>
+              <input type="number" id="adjustWidth" min="0" max="8192" value="0" style="width: 6.5rem;" />
+            </div>
+            <div>
+              <label for="adjustHeight" style="margin-bottom: 0.15rem; font-size: 0.75rem;">Height</label>
+              <input type="number" id="adjustHeight" min="0" max="8192" value="0" style="width: 6.5rem;" />
+            </div>
+          </div>
+          <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <input type="checkbox" id="adjustKeepAspect" checked />
+            <span>Fit within size (keep aspect ratio)</span>
+          </label>
+          <p class="helpText">If scale is not 100%, scale wins. Otherwise set width and/or height (0 ignores that side). Uncheck “fit within” to stretch to exact width × height.</p>
                 </section>
                 <p id="errorAdjust" class="error" style="display: none;"></p>
               </div>
@@ -667,12 +717,14 @@
           <label>Prompt</label>
           <input type="text" name="prompt" id="prompt" placeholder="e.g. Seamless sky and trees" />
           <label>Provider</label>
-          <select name="provider" id="provider">
+          <select name="provider" id="providerExtend">
             <option value="openai">OpenAI</option>
-            <option value="fal">Fal (Gemini)</option>
+            <option value="gemini">Gemini (Nano Banana)</option>
+            <option value="minimax">MiniMax</option>
+            <option value="fal">Fal (Flux)</option>
           </select>
-          <div id="modelRow">
-            <label for="modelExtend">Model (OpenAI)</label>
+          <div id="modelRowExtend">
+            <label for="modelExtend" id="modelExtendLabel">Model</label>
             <select name="model" id="modelExtend"></select>
           </div>
                 </section>
@@ -700,10 +752,12 @@
           <label>Provider</label>
           <select name="providerManipulate" id="providerManipulate">
             <option value="openai">OpenAI</option>
-            <option value="fal">Fal (Gemini)</option>
+            <option value="gemini">Gemini (Nano Banana)</option>
+            <option value="minimax">MiniMax</option>
+            <option value="fal">Fal (Flux)</option>
           </select>
           <div id="modelRowManipulate">
-            <label for="modelManipulate">Model (OpenAI)</label>
+            <label for="modelManipulate" id="modelManipulateLabel">Model</label>
             <select name="modelManipulate" id="modelManipulate"></select>
           </div>
                 </section>
@@ -764,6 +818,22 @@
     </div>
   </div>
 
+  <div id="renameModal" class="settingsModal" role="dialog" aria-labelledby="renameTitle" aria-modal="true">
+    <div class="settingsPanel">
+      <div class="settingsHeader">
+        <h2 id="renameTitle">Rename image</h2>
+        <button type="button" id="renameCloseBtn" class="secondary">Cancel</button>
+      </div>
+      <label for="renameInput">Filename</label>
+      <input type="text" id="renameInput" autocomplete="off" spellcheck="false" />
+      <p class="helpText">This changes the name shown in the library. The file on disk stays as a unique ID.</p>
+      <div class="keyActions" style="margin-top: 0.75rem;">
+        <button type="button" id="renameSaveBtn">Save</button>
+      </div>
+      <p id="renameError" class="error" style="display: none;"></p>
+    </div>
+  </div>
+
   <div id="settingsModal" class="settingsModal" role="dialog" aria-labelledby="settingsTitle" aria-modal="true">
     <div class="settingsPanel">
       <div class="settingsHeader">
@@ -774,6 +844,7 @@
         <h3>API keys</h3>
         <p class="helpText">Keys are saved locally in your Game Images data folder. Environment variables override stored values when set.</p>
         <div class="keyRow">
+          <p id="openaiActiveAuth" class="keyStatus" style="color: var(--accent); font-weight: 600;"></p>
           <label for="openaiKeyInput">OpenAI API key</label>
           <p id="openaiKeyStatus" class="keyStatus"></p>
           <input type="password" id="openaiKeyInput" autocomplete="off" spellcheck="false" placeholder="sk-…" />
@@ -781,6 +852,20 @@
             <button type="button" id="openaiKeySaveBtn">Save</button>
             <button type="button" id="openaiKeyRemoveBtn" class="secondary">Remove</button>
           </div>
+          <p id="openaiOauthStatus" class="keyStatus"></p>
+          <div class="keyActions">
+            <button type="button" id="openaiOauthSignInBtn">Sign in with OpenAI…</button>
+            <button type="button" id="openaiOauthRemoveBtn" class="secondary">Sign out</button>
+          </div>
+          <p id="openaiOauthProgress" class="helpText" style="display: none;"></p>
+          <details class="errorRaw" style="margin-top: 0.5rem;">
+            <summary>Advanced: paste token manually</summary>
+            <input type="password" id="openaiOauthInput" autocomplete="off" spellcheck="false" placeholder="OAuth access token…" style="margin-top: 0.35rem;" />
+            <div class="keyActions">
+              <button type="button" id="openaiOauthSaveBtn">Save token</button>
+            </div>
+          </details>
+          <p class="helpText">Sign in uses the ChatGPT/Codex OAuth flow (browser login, callback on port 1455). API key env var still takes precedence. If port 1455 is in use, stop Codex/other tools or set <code>GAME_IMAGES_OPENAI_USE_APP_REDIRECT=1</code>.</p>
         </div>
         <div class="keyRow">
           <label for="geminiKeyInput">Gemini API key (Nano Banana)</label>
@@ -849,6 +934,12 @@
     const activeImageLabelEl = document.getElementById('activeImageLabel');
     const activeImageDimsEl = document.getElementById('activeImageDims');
     const librarySaveBanner = document.getElementById('librarySaveBanner');
+    const libraryRenameBtn = document.getElementById('libraryRenameBtn');
+    const activeImageRenameBtn = document.getElementById('activeImageRenameBtn');
+    const renameModal = document.getElementById('renameModal');
+    const renameInput = document.getElementById('renameInput');
+    const renameError = document.getElementById('renameError');
+    let renameTargetId = null;
     let previewObjectUrl = null;
     let activeImageThumbUrl = null;
     let workingImageBlob = null;
@@ -1019,13 +1110,14 @@
     })();
 
     let modelCatalog = null;
-    const CREATE_PROVIDERS = ['openai', 'gemini', 'minimax', 'fal'];
-    const CREATE_PROVIDER_LABELS = {
+    const AI_PROVIDERS = ['openai', 'gemini', 'minimax', 'fal'];
+    const PROVIDER_LABELS = {
       openai: 'OpenAI',
       gemini: 'Gemini (Nano Banana)',
       minimax: 'MiniMax',
       fal: 'Fal (Flux)',
     };
+    const PROVIDERS_WITH_MODEL = ['openai', 'gemini', 'minimax'];
     function fillModelSelect(selectEl, models, preferredId) {
       const prev = selectEl.value;
       selectEl.innerHTML = '';
@@ -1058,16 +1150,17 @@
       return Array.isArray(list) ? list : [];
     }
 
-    function syncCreateProviderOptions() {
-      const sel = document.getElementById('providerCreate');
+    function syncProviderOptions(selectId, capability) {
+      const sel = document.getElementById(selectId);
+      if (!sel) return;
       const current = sel.value;
       sel.innerHTML = '';
-      CREATE_PROVIDERS.forEach(function(p) {
-        const models = modelsForProvider(p, 'create');
+      AI_PROVIDERS.forEach(function(p) {
+        const models = modelsForProvider(p, capability);
         if (modelCatalog && modelCatalog.discovered_at && !models.length) return;
         const opt = document.createElement('option');
         opt.value = p;
-        opt.textContent = CREATE_PROVIDER_LABELS[p] || p;
+        opt.textContent = PROVIDER_LABELS[p] || p;
         sel.appendChild(opt);
       });
       if (current && sel.querySelector('option[value="' + CSS.escape(current) + '"]')) {
@@ -1077,37 +1170,56 @@
       }
     }
 
-    function syncCreateModelRow() {
-      const provider = document.getElementById('providerCreate').value;
-      const row = document.getElementById('modelRowCreate');
-      const needsModel = provider === 'openai' || provider === 'gemini' || provider === 'minimax';
+    function syncModelRow(providerSelectId, modelSelectId, rowId, labelId, capability) {
+      const provider = document.getElementById(providerSelectId).value;
+      const row = document.getElementById(rowId);
+      const needsModel = PROVIDERS_WITH_MODEL.indexOf(provider) !== -1;
       row.style.display = needsModel ? 'block' : 'none';
-      const label = document.getElementById('modelCreateLabel');
-      label.textContent = 'Model (' + (CREATE_PROVIDER_LABELS[provider] || provider) + ')';
+      const label = document.getElementById(labelId);
+      if (label) label.textContent = 'Model (' + (PROVIDER_LABELS[provider] || provider) + ')';
       if (needsModel) {
-        fillModelSelect(document.getElementById('modelCreate'), modelsForProvider(provider, 'create'));
+        fillModelSelect(document.getElementById(modelSelectId), modelsForProvider(provider, capability));
       }
+    }
+
+    function syncCreateProviderOptions() {
+      syncProviderOptions('providerCreate', 'create');
+    }
+
+    function syncCreateModelRow() {
+      syncModelRow('providerCreate', 'modelCreate', 'modelRowCreate', 'modelCreateLabel', 'create');
       const hint = document.getElementById('modelCreateHint');
-      if (modelCatalog && modelCatalog.discovered_at) {
-        hint.textContent = 'Models from your last discovery run.';
-      } else {
-        hint.textContent = 'Run Discover models in Settings to refresh this list for your API keys.';
+      if (hint) {
+        if (modelCatalog && modelCatalog.discovered_at) {
+          hint.textContent = 'Models from your last discovery run.';
+        } else {
+          hint.textContent = 'Run Discover models in Settings to refresh this list for your API keys.';
+        }
       }
     }
 
-    function syncExtendOpenaiModels() {
-      fillModelSelect(document.getElementById('modelExtend'), modelsForProvider('openai', 'extend'));
+    function syncExtendModelRow() {
+      syncProviderOptions('providerExtend', 'extend');
+      syncModelRow('providerExtend', 'modelExtend', 'modelRowExtend', 'modelExtendLabel', 'extend');
     }
 
-    function syncManipulateOpenaiModels() {
-      fillModelSelect(document.getElementById('modelManipulate'), modelsForProvider('openai', 'manipulate'));
+    function syncManipulateModelRow() {
+      syncProviderOptions('providerManipulate', 'manipulate');
+      syncModelRow('providerManipulate', 'modelManipulate', 'modelRowManipulate', 'modelManipulateLabel', 'manipulate');
     }
 
     function applyModelCatalogToUI() {
       syncCreateProviderOptions();
       syncCreateModelRow();
-      syncExtendOpenaiModels();
-      syncManipulateOpenaiModels();
+      syncExtendModelRow();
+      syncManipulateModelRow();
+    }
+
+    function appendModelToFormData(formData, provider, modelSelectId) {
+      if (PROVIDERS_WITH_MODEL.indexOf(provider) === -1) return;
+      const modelId = document.getElementById(modelSelectId).value;
+      if (!modelId) throw new Error('Select a model (run Discover models in Settings).');
+      formData.append('model', modelId);
     }
 
     async function loadModelCatalog() {
@@ -1157,6 +1269,8 @@
     }
 
     document.getElementById('providerCreate').addEventListener('change', syncCreateModelRow);
+    document.getElementById('providerExtend').addEventListener('change', syncExtendModelRow);
+    document.getElementById('providerManipulate').addEventListener('change', syncManipulateModelRow);
     loadModelCatalog();
 
     (function initSettings() {
@@ -1240,6 +1354,139 @@
         }
       }
 
+      function renderOpenaiAuth(info) {
+        if (!info) return;
+        const activeEl = document.getElementById('openaiActiveAuth');
+        if (info.active_auth_label) {
+          activeEl.textContent = 'In use for OpenAI requests: ' + info.active_auth_label;
+          activeEl.style.display = 'block';
+        } else {
+          activeEl.textContent = 'No OpenAI credentials configured.';
+          activeEl.style.display = 'block';
+        }
+        const keyInput = document.getElementById('openaiKeyInput');
+        const oauthInput = document.getElementById('openaiOauthInput');
+        const keyStatus = document.getElementById('openaiKeyStatus');
+        const oauthStatus = document.getElementById('openaiOauthStatus');
+        const keySave = document.getElementById('openaiKeySaveBtn');
+        const keyRemove = document.getElementById('openaiKeyRemoveBtn');
+        const oauthSave = document.getElementById('openaiOauthSaveBtn');
+        const oauthRemove = document.getElementById('openaiOauthRemoveBtn');
+
+        if (info.from_env && info.auth_method === 'api_key') {
+          keyStatus.textContent = 'Active via OPENAI_API_KEY' + (info.hint ? ' (' + info.hint + ')' : '') + '.';
+          keyInput.disabled = true;
+          keySave.disabled = true;
+          keyRemove.disabled = true;
+          oauthStatus.textContent = 'Inactive while API key env is set.';
+          oauthInput.disabled = true;
+          oauthSave.disabled = true;
+          oauthRemove.disabled = true;
+          return;
+        }
+        if (info.from_env && info.auth_method === 'oauth') {
+          oauthStatus.textContent = 'Active via OPENAI_OAUTH_TOKEN / OPENAI_ACCESS_TOKEN' + (info.hint ? ' (' + info.hint + ')' : '') + '.';
+          oauthInput.disabled = true;
+          oauthSave.disabled = true;
+          oauthRemove.disabled = true;
+          keyStatus.textContent = info.api_key_stored ? 'Stored API key (inactive): ' + info.api_key_hint : 'API key not set';
+          keyInput.disabled = true;
+          keySave.disabled = true;
+          keyRemove.disabled = true;
+          return;
+        }
+        keyInput.disabled = false;
+        oauthInput.disabled = false;
+        keySave.disabled = false;
+        oauthSave.disabled = false;
+        keyStatus.textContent = info.api_key_stored ? 'Saved: ' + info.api_key_hint : 'Not set';
+        keyRemove.disabled = !info.api_key_stored;
+        const keyActive = info.active_auth === 'api_key_env' || info.active_auth === 'api_key_stored';
+        const oauthActive = info.active_auth && info.active_auth.indexOf('oauth') === 0;
+        if (keyActive) {
+          keyStatus.textContent = 'In use — ' + keyStatus.textContent;
+        } else if (info.api_key_stored) {
+          keyStatus.textContent = 'Saved (not in use — OAuth or env takes precedence): ' + info.api_key_hint;
+        }
+        oauthStatus.textContent = info.oauth_stored ? 'Saved: ' + info.oauth_hint : 'Not set';
+        oauthRemove.disabled = !info.oauth_stored;
+        if (info.oauth_session) {
+          const acct = info.oauth_account_id ? ' (' + info.oauth_account_id + ')' : '';
+          oauthStatus.textContent = 'Signed in via OAuth' + acct + (info.oauth_hint ? ' — ' + info.oauth_hint : '');
+          oauthRemove.disabled = false;
+        }
+        if (oauthActive) {
+          oauthStatus.textContent = 'In use — ' + oauthStatus.textContent;
+        } else if (info.oauth_stored && !oauthActive) {
+          oauthStatus.textContent = 'Saved (not in use — API key takes precedence): ' + (info.oauth_hint || '…');
+        }
+      }
+
+      async function startOpenAiOAuthSignIn() {
+        const progress = document.getElementById('openaiOauthProgress');
+        progress.style.display = 'block';
+        progress.textContent = 'Starting sign-in…';
+        if (!apiOrigin) {
+          const ok = await resolveApiOrigin();
+          if (!ok) {
+            progress.textContent = 'Connect to the Game Images server first.';
+            return;
+          }
+        }
+        const port = parseInt(window.location.port, 10) || 8000;
+        try {
+          const r = await apiFetch('/settings/oauth/openai/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ redirect_port: port }),
+          });
+          if (!r.ok) {
+            const err = await r.json().catch(function() { return {}; });
+            throw apiErrorToError(parseApiError(r, err, '/settings/oauth/openai/start'));
+          }
+          const data = await r.json();
+          progress.textContent = 'Complete sign-in in the browser window…';
+          window.open(data.auth_url, 'game_images_openai_oauth', 'noopener,width=520,height=720');
+          let done = false;
+          function finishOk() {
+            if (done) return;
+            done = true;
+            clearInterval(pollTimer);
+            progress.textContent = 'Signed in successfully.';
+            loadKeysStatus();
+          }
+          function finishErr(msg) {
+            if (done) return;
+            done = true;
+            clearInterval(pollTimer);
+            progress.textContent = msg || 'Sign-in failed.';
+          }
+          const pollTimer = setInterval(async function() {
+            try {
+              const pr = await apiFetch('/settings/oauth/openai/poll?state=' + encodeURIComponent(data.state));
+              if (!pr.ok) return;
+              const pd = await pr.json();
+              if (pd.status === 'complete') finishOk();
+              else if (pd.status === 'error') finishErr(pd.error);
+            } catch (e) { /* ignore poll errors */ }
+          }, 1200);
+          setTimeout(function() { if (!done) finishErr('Sign-in timed out. Try again.'); }, 300000);
+        } catch (err) {
+          const info = errorInfoFromThrown(err);
+          progress.textContent = info.message || info.summary;
+        }
+      }
+
+      window.addEventListener('message', function(e) {
+        if (!e.data || e.data.type !== 'game-images-openai-oauth') return;
+        if (e.data.status === 'success') {
+          document.getElementById('openaiOauthProgress').textContent = 'Signed in successfully.';
+          loadKeysStatus();
+        } else if (e.data.status === 'error') {
+          document.getElementById('openaiOauthProgress').textContent = e.data.message || 'Sign-in failed.';
+        }
+      });
+
       async function loadKeysStatus() {
         showSettingsError('');
         if (!apiOrigin) {
@@ -1255,7 +1502,8 @@
           return;
         }
         const data = await r.json();
-        ['openai', 'gemini', 'minimax', 'fal'].forEach(function(which) {
+        renderOpenaiAuth(data.openai);
+        ['gemini', 'minimax', 'fal'].forEach(function(which) {
           renderKeyRow(which, data[which]);
         });
         if (data.settings_path) {
@@ -1285,6 +1533,7 @@
         Object.keys(keyFields).forEach(function(which) {
           keyFields[which].input.value = '';
         });
+        document.getElementById('openaiOauthInput').value = '';
         loadKeysStatus();
         loadModelCatalog();
       }
@@ -1295,6 +1544,7 @@
         Object.keys(keyFields).forEach(function(which) {
           keyFields[which].input.value = '';
         });
+        document.getElementById('openaiOauthInput').value = '';
       }
 
       openBtn.addEventListener('click', openSettings);
@@ -1340,6 +1590,31 @@
       }
 
       bindKeySave('openai', 'OpenAI');
+      document.getElementById('openaiOauthSignInBtn').addEventListener('click', startOpenAiOAuthSignIn);
+      document.getElementById('openaiOauthRemoveBtn').addEventListener('click', async function() {
+        try {
+          await putKeys({ openai_oauth_token: '' });
+          document.getElementById('openaiOauthInput').value = '';
+          document.getElementById('openaiOauthProgress').style.display = 'none';
+          await loadKeysStatus();
+        } catch (err) {
+          showSettingsError(errorInfoFromThrown(err));
+        }
+      });
+      document.getElementById('openaiOauthSaveBtn').addEventListener('click', async function() {
+        const val = document.getElementById('openaiOauthInput').value.trim();
+        if (!val) {
+          showSettingsError('Enter an OpenAI OAuth token to save.');
+          return;
+        }
+        try {
+          await putKeys({ openai_oauth_token: val });
+          document.getElementById('openaiOauthInput').value = '';
+          await loadKeysStatus();
+        } catch (err) {
+          showSettingsError(errorInfoFromThrown(err));
+        }
+      });
       bindKeySave('gemini', 'Gemini');
       bindKeySave('minimax', 'MiniMax');
       bindKeySave('fal', 'Fal');
@@ -1383,6 +1658,7 @@
         const h = previewImg.naturalHeight;
         const dimsEl = previewMeta.querySelector('[data-dim]');
         if (dimsEl) dimsEl.textContent = w + ' × ' + h + ' px';
+        updateAdjustSizeHint();
       };
     }
 
@@ -1405,6 +1681,7 @@
         const dimStr = w + ' × ' + h + ' px';
         if (dimsEl) dimsEl.textContent = dimStr;
         activeImageDimsEl.textContent = dimStr;
+        updateAdjustSizeHint();
         updateActiveImageBar();
       };
       previewImg.removeAttribute('src');
@@ -1412,6 +1689,75 @@
       previewImg.src = previewObjectUrl;
       previewContent.offsetHeight;
       updateActiveImageBar();
+    }
+
+    function updateRenameButtonsEnabled() {
+      const canRename = Boolean(selectedLibraryId);
+      libraryRenameBtn.disabled = !canRename;
+      activeImageRenameBtn.disabled = !canRename;
+    }
+
+    function showRenameError(msg) {
+      renameError.textContent = msg || '';
+      renameError.style.display = msg ? 'block' : 'none';
+    }
+
+    function openRenameModal(id, filename) {
+      renameTargetId = id;
+      renameInput.value = filename || '';
+      showRenameError('');
+      renameModal.classList.add('visible');
+      renameInput.focus();
+      renameInput.select();
+    }
+
+    function closeRenameModal() {
+      renameModal.classList.remove('visible');
+      renameTargetId = null;
+      renameInput.value = '';
+      showRenameError('');
+    }
+
+    async function saveLibraryRename() {
+      const id = renameTargetId;
+      const name = renameInput.value.trim();
+      if (!id) return;
+      if (!name) {
+        showRenameError('Enter a filename.');
+        return;
+      }
+      showRenameError('');
+      renameSaveBtn.disabled = true;
+      try {
+        if (!apiOrigin) {
+          const ok = await resolveApiOrigin();
+          if (!ok) throw new Error('Game Images API not available.');
+        }
+        const r = await apiFetch('/library/' + id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: name }),
+        });
+        if (!r.ok) {
+          const err = await r.json().catch(function() { return {}; });
+          throw apiErrorToError(parseApiError(r, err, '/library/' + id));
+        }
+        const meta = await r.json();
+        const newName = meta.filename || name;
+        if (id === selectedLibraryId) {
+          activeImageLabel = newName;
+          updateActiveImageBar();
+          updateAreaStatus();
+        }
+        closeRenameModal();
+        await refreshLibraryGrid();
+        await refreshMaskLibrarySelect();
+        setStatus('Renamed to ' + newName, false);
+      } catch (err) {
+        const info = errorInfoFromThrown(err);
+        showRenameError(info.message || info.summary);
+      }
+      renameSaveBtn.disabled = false;
     }
 
     function updateActiveImageBar() {
@@ -1424,11 +1770,13 @@
         }
         activeImageThumb.removeAttribute('src');
         setEditNavEnabled(false);
+        updateRenameButtonsEnabled();
         return;
       }
       activeImageBarEmpty.style.display = 'none';
       activeImageBarContent.style.display = 'flex';
       activeImageLabelEl.textContent = activeImageLabel || (selectedLibraryId ? 'Library image' : 'Working image');
+      updateRenameButtonsEnabled();
       if (activeImageThumbUrl) URL.revokeObjectURL(activeImageThumbUrl);
       activeImageThumbUrl = URL.createObjectURL(workingImageBlob);
       activeImageThumb.src = activeImageThumbUrl;
@@ -1494,12 +1842,23 @@
           const div = document.createElement('div');
           div.className = 'libraryItem' + (item.id === selectedLibraryId ? ' selected' : '');
           div.dataset.id = item.id;
-          div.title = item.filename || item.id;
+          const thumb = document.createElement('div');
+          thumb.className = 'libraryItemThumb';
           const img = document.createElement('img');
           img.src = '/library/' + item.id;
           img.alt = item.filename || '';
           img.loading = 'lazy';
-          div.appendChild(img);
+          thumb.appendChild(img);
+          div.appendChild(thumb);
+          const caption = document.createElement('span');
+          caption.className = 'libraryItemName';
+          caption.textContent = item.filename || item.id.slice(0, 8);
+          caption.title = 'Double-click to rename';
+          caption.addEventListener('dblclick', function(e) {
+            e.stopPropagation();
+            openRenameModal(item.id, item.filename || '');
+          });
+          div.appendChild(caption);
           div.addEventListener('click', function() { selectFromLibrary(item.id, item); });
           libraryGrid.appendChild(div);
         });
@@ -1652,8 +2011,30 @@
         switchEditTool(this.dataset.tool);
       });
     });
+    const renameSaveBtn = document.getElementById('renameSaveBtn');
+    const renameCloseBtn = document.getElementById('renameCloseBtn');
     document.getElementById('activeImageChangeBtn').addEventListener('click', function() { switchArea('library'); });
     document.getElementById('activeImageClearBtn').addEventListener('click', clearActiveImage);
+    libraryRenameBtn.addEventListener('click', function() {
+      if (!selectedLibraryId) return;
+      openRenameModal(selectedLibraryId, activeImageLabel || '');
+    });
+    activeImageRenameBtn.addEventListener('click', function() {
+      if (!selectedLibraryId) return;
+      openRenameModal(selectedLibraryId, activeImageLabel || '');
+    });
+    renameSaveBtn.addEventListener('click', saveLibraryRename);
+    renameCloseBtn.addEventListener('click', closeRenameModal);
+    renameModal.addEventListener('click', function(e) {
+      if (e.target === renameModal) closeRenameModal();
+    });
+    renameInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') saveLibraryRename();
+      if (e.key === 'Escape') closeRenameModal();
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && renameModal.classList.contains('visible')) closeRenameModal();
+    });
     document.getElementById('librarySaveBannerDismiss').addEventListener('click', function() {
       librarySaveBanner.style.display = 'none';
     });
@@ -1724,15 +2105,6 @@
       }
       applyShiftBtn.disabled = false;
     });
-
-    document.getElementById('provider').addEventListener('change', function() {
-      document.getElementById('modelRow').style.display = this.value === 'openai' ? 'block' : 'none';
-    });
-    document.getElementById('providerManipulate').addEventListener('change', function() {
-      document.getElementById('modelRowManipulate').style.display = this.value === 'openai' ? 'block' : 'none';
-    });
-    document.getElementById('modelRow').style.display = document.getElementById('provider').value === 'openai' ? 'block' : 'none';
-    document.getElementById('modelRowManipulate').style.display = document.getElementById('providerManipulate').value === 'openai' ? 'block' : 'none';
 
     (function initMaskEditor() {
       const modal = document.getElementById('maskEditorModal');
@@ -1985,7 +2357,10 @@
       const wasCreate = mainArea === 'create';
       if (lastResultUrl) URL.revokeObjectURL(lastResultUrl);
       lastResultUrl = URL.createObjectURL(blob);
+      const downloadName = (activeImageLabel || 'result').replace(/[^\w.\-]+/g, '_').replace(/^_|_$/g, '') || 'result';
       topBarDownloadLink.href = lastResultUrl;
+      topBarDownloadLink.download = downloadName.endsWith('.png') ? downloadName : downloadName + '.png';
+      topBarDownloadLink.textContent = 'Download';
       topBarDownloadLink.style.display = 'inline-block';
       workingImageBlob = blob;
       selectedLibraryId = null;
@@ -2049,11 +2424,7 @@
           formData.append('height', document.getElementById('createHeight').value);
           const createProvider = document.getElementById('providerCreate').value;
           formData.append('provider', createProvider);
-          if (createProvider === 'openai' || createProvider === 'gemini' || createProvider === 'minimax') {
-            const modelId = document.getElementById('modelCreate').value;
-            if (!modelId) throw new Error('Select a model (run Discover models in Settings).');
-            formData.append('model', modelId);
-          }
+          appendModelToFormData(formData, createProvider, 'modelCreate');
         } else if (!workingImageBlob) {
           throw new Error('Select an image in Library or create one first.');
         } else if (op === 'adjust') {
@@ -2066,6 +2437,13 @@
           formData.append('blur_radius', document.getElementById('adjustBlur').value);
           formData.append('rotate_degrees', document.getElementById('adjustRotate').value);
           formData.append('flip', document.getElementById('adjustFlip').value);
+          formData.append('resize_scale', (parseFloat(document.getElementById('adjustScale').value) / 100).toFixed(4));
+          formData.append('resize_width', document.getElementById('adjustWidth').value || '0');
+          formData.append('resize_height', document.getElementById('adjustHeight').value || '0');
+          formData.append(
+            'resize_keep_aspect',
+            document.getElementById('adjustKeepAspect').checked ? 'true' : 'false'
+          );
           promptForLibrary = 'adjust';
         } else if (op === 'tile') {
           endpoint = '/tile';
@@ -2083,12 +2461,9 @@
           promptForLibrary = document.getElementById('prompt').value || 'Seamlessly extend the image.';
           formData.append('image', workingImageBlob, 'image.png');
           formData.append('prompt', promptForLibrary);
-          formData.append('provider', document.getElementById('provider').value);
-          if (document.getElementById('provider').value === 'openai') {
-            const extendModel = document.getElementById('modelExtend').value;
-            if (!extendModel) throw new Error('Select an OpenAI model (run Discover models in Settings).');
-            formData.append('model', extendModel);
-          }
+          const extendProvider = document.getElementById('providerExtend').value;
+          formData.append('provider', extendProvider);
+          appendModelToFormData(formData, extendProvider, 'modelExtend');
           formData.append('direction', document.getElementById('direction').value);
           formData.append('amount', document.getElementById('amount').value);
         } else if (op === 'manipulate') {
@@ -2097,12 +2472,9 @@
           endpoint = '/manipulate';
           formData.append('image', workingImageBlob, 'image.png');
           formData.append('prompt', promptForLibrary);
-          formData.append('provider', document.getElementById('providerManipulate').value);
-          if (document.getElementById('providerManipulate').value === 'openai') {
-            const manipModel = document.getElementById('modelManipulate').value;
-            if (!manipModel) throw new Error('Select an OpenAI model (run Discover models in Settings).');
-            formData.append('model', manipModel);
-          }
+          const manipProvider = document.getElementById('providerManipulate').value;
+          formData.append('provider', manipProvider);
+          appendModelToFormData(formData, manipProvider, 'modelManipulate');
           const maskInputEl = document.getElementById('maskInput');
           if (maskBlob) formData.append('mask', maskBlob, 'mask.png');
           else if (maskInputEl.files && maskInputEl.files[0]) formData.append('mask', maskInputEl.files[0], 'mask.png');
@@ -2127,17 +2499,32 @@
       updateRunButton();
     }
 
-    function bindSlider(id, labelId) {
+    function bindSlider(id, labelId, format) {
       const el = document.getElementById(id);
       const lab = document.getElementById(labelId);
       if (!el || !lab) return;
-      el.addEventListener('input', function() { lab.textContent = el.value; });
+      function sync() {
+        lab.textContent = format ? format(el.value) : el.value;
+      }
+      el.addEventListener('input', sync);
+      sync();
     }
     bindSlider('adjustBrightness', 'brightnessVal');
     bindSlider('adjustContrast', 'contrastVal');
     bindSlider('adjustSaturation', 'saturationVal');
     bindSlider('adjustSharpness', 'sharpnessVal');
     bindSlider('adjustBlur', 'blurVal');
+    bindSlider('adjustScale', 'adjustScaleVal', function(v) { return v + '%'; });
+
+    function updateAdjustSizeHint() {
+      const hint = document.getElementById('adjustSizeHint');
+      if (!hint) return;
+      if (previewImg.naturalWidth > 0 && previewImg.naturalHeight > 0) {
+        hint.textContent = 'Current size: ' + previewImg.naturalWidth + ' × ' + previewImg.naturalHeight + ' px';
+      } else {
+        hint.textContent = 'Current size: —';
+      }
+    }
     bindSlider('mapStrength', 'mapStrengthVal');
     document.getElementById('promptCreate').addEventListener('input', updateRunButton);
     document.getElementById('promptManipulate').addEventListener('input', updateRunButton);

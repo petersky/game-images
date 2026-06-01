@@ -7,6 +7,7 @@ from typing import get_args
 from PIL import Image
 
 from game_images.providers.base import Direction
+from game_images.settings import get_openai_credential
 
 DirectionTuple = tuple[int, int, int, int]  # expand_left, expand_top, expand_right, expand_bottom
 
@@ -66,13 +67,14 @@ class OpenAIProvider:
         api_key: str | None = None,
         model: str | None = None,
     ) -> None:
-        self._api_key = api_key or os.environ.get("OPENAI_API_KEY")
+        self._api_key = api_key or get_openai_credential()
         self._model = (
             model or os.environ.get("OPENAI_IMAGE_MODEL") or "gpt-image-1.5"
         )
         if not self._api_key:
             raise ValueError(
-                "OpenAI API key not set. Add it in Settings (gear icon) or set OPENAI_API_KEY."
+                "OpenAI credentials not set. Add an API key or OAuth token in Settings, "
+                "or set OPENAI_API_KEY / OPENAI_OAUTH_TOKEN."
             )
 
     def _client(self):

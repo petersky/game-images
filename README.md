@@ -14,7 +14,7 @@ pip install -e .
 
 **Environment variables** override stored keys (useful for CI or shells):
 
-- **OpenAI**: `OPENAI_API_KEY`
+- **OpenAI**: `OPENAI_API_KEY` (preferred), or **Sign in with OpenAI** in Settings (ChatGPT/Codex OAuth — opens browser, captures token on callback). Uses `http://localhost:1455/auth/callback` like Codex CLI. Set `GAME_IMAGES_OPENAI_USE_APP_REDIRECT=1` to use your serve port instead. Manual `OPENAI_OAUTH_TOKEN` still works.
 - **Gemini** (Nano Banana image models): `GEMINI_API_KEY` or `GOOGLE_API_KEY`
 - **MiniMax** (image generation): `MINIMAX_API_KEY`
 - **Fal**: `FAL_KEY`
@@ -45,10 +45,12 @@ Other supported IDs: `gpt-image-1`, `gpt-image-1-mini`, and legacy `dall-e-2` / 
 game-images create --prompt "Seamless dark asphalt texture" --width 1024 --height 1024 --provider openai -o base.png
 ```
 
-**Adjust** (brightness, contrast, blur, rotate, flip — no API key):
+**Adjust** (brightness, contrast, blur, rotate, flip, resize — no API key):
 
 ```bash
 game-images adjust base.png --brightness 1.1 --contrast 1.2 -o tuned.png
+game-images adjust base.png --resize-scale 0.5 -o half.png
+game-images adjust base.png --width 512 --height 512 -o sized.png
 ```
 
 **Tile** (seamless helpers):
@@ -105,7 +107,7 @@ Results from Create and Edit are saved to the library automatically.
 
 The Web UI uses a local **image library** instead of one-off file uploads. Images are stored on disk and indexed with metadata (prompt, tags, dimensions).
 
-- **Library**: Browse and select images, or **Import** new ones. Selection is restored on reload when possible.
+- **Library**: Browse and select images, or **Import** new ones. **Rename** updates the display filename (double-click a name in the grid, or use Rename in the library toolbar or active-image bar). Selection is restored on reload when possible.
 - **Edit → Manipulate**: Select a mask from the library, create one in the mask editor (optionally save to library), or upload a file.
 - **Prepare (shift)**: In-memory prep for Extend; not saved until a later operation writes to the library.
 

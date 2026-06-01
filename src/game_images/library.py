@@ -13,6 +13,25 @@ from PIL import Image
 
 ImageType = Literal["image", "mask", "result"]
 
+_INVALID_FILENAME_CHARS = '<>:"/\\|?*\0'
+
+
+def sanitize_filename(name: str) -> str:
+    """Normalize a display filename (library files stay {id}.png on disk)."""
+    cleaned = (name or "").strip()
+    cleaned = Path(cleaned).name
+    cleaned = "".join(
+        c for c in cleaned if c.isprintable() and c not in _INVALID_FILENAME_CHARS
+    ).strip()
+    if not cleaned or cleaned in (".", ".."):
+        return "untitled.png"
+    if len(cleaned) > 200:
+        p = Path(cleaned)
+        suffix = p.suffix if p.suffix else ".png"
+        stem = p.stem[: max(1, 200 - len(suffix))]
+        cleaned = stem + suffix
+    return cleaned
+
 
 def get_library_path() -> Path:
     """Resolve library root from GAME_IMAGES_LIBRARY env or default."""
@@ -95,6 +114,7 @@ class Library:
         """Add image to library. Returns id."""
         img_id = str(uuid.uuid4())
         file_path = self.images_dir / f"{img_id}.png"
+        filename = sanitize_filename(filename or f"{img_id}.png")
 
         # Normalize to PNG
         png_bytes = self._normalize_to_png(data)
@@ -119,7 +139,7 @@ class Library:
                 """,
                 (
                     img_id,
-                    filename or f"{img_id}.png",
+                    filename,
                     type,
                     width,
                     height,
@@ -186,10 +206,16 @@ class Library:
                 return None
             return self._row_to_dict(row)
 
+    def rename(self, img_id: str, filename: str) -> bool:
+        """Rename the display filename for a library item."""
+        return self.update_metadata(img_id, filename=sanitize_filename(filename))
+
     def update_metadata(self, img_id: str, **kwargs: str | int | dict | None) -> bool:
         """Update metadata fields. Returns True if found."""
         allowed = {"filename", "prompt", "tags", "notes", "extra"}
         updates = {k: v for k, v in kwargs.items() if k in allowed and v is not None}
+        if "filename" in updates:
+            updates["filename"] = sanitize_filename(str(updates["filename"]))
         if "extra" in updates and isinstance(updates["extra"], dict):
             updates["extra"] = json.dumps(updates["extra"])
         if not updates:

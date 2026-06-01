@@ -215,10 +215,17 @@ async def api_adjust(
     blur_radius: float = Form(0.0),
     rotate_degrees: float = Form(0.0),
     flip: str = Form("none"),
+    resize_scale: float = Form(1.0),
+    resize_width: int = Form(0),
+    resize_height: int = Form(0),
+    resize_keep_aspect: bool = Form(True),
 ) -> Response:
     _, _, _, _, _, adjust_image_fn, _, _ = _core()
     try:
         body = normalize_upload_to_png(await image.read())
+        scale = max(0.01, min(10.0, resize_scale))
+        rw = max(0, min(8192, resize_width))
+        rh = max(0, min(8192, resize_height))
         result = adjust_image_fn(
             body,
             brightness=brightness,
@@ -228,6 +235,10 @@ async def api_adjust(
             blur_radius=blur_radius,
             rotate_degrees=rotate_degrees,
             flip=flip,
+            resize_scale=scale,
+            resize_width=rw,
+            resize_height=rh,
+            resize_keep_aspect=resize_keep_aspect,
         )
     except Exception as e:
         status, detail = _handle_provider_error(e)
@@ -315,14 +326,29 @@ async def library_get_meta(img_id: str) -> dict:
     return meta
 
 
+class LibraryUpdateBody(BaseModel):
+    """Update library metadata. Only provided fields are changed."""
+
+    filename: str | None = None
+    prompt: str | None = None
+    tags: str | None = None
+    notes: str | None = None
+
+
 @app.patch("/library/{img_id}")
-async def library_update(img_id: str, body: dict = Body(...)) -> dict:
-    """Update metadata."""
+async def library_update(img_id: str, body: LibraryUpdateBody) -> dict:
+    """Update metadata (e.g. rename via filename)."""
     lib = _get_library()
     if not lib.get_metadata(img_id):
         raise HTTPException(status_code=404, detail="Image not found")
-    lib.update_metadata(img_id, **{k: v for k, v in body.items() if v is not None})
-    return lib.get_metadata(img_id) or {}
+    payload = body.model_dump(exclude_unset=True)
+    if not payload:
+        raise HTTPException(status_code=400, detail="No fields to update.")
+    if "filename" in payload and not (payload["filename"] or "").strip():
+        raise HTTPException(status_code=400, detail="Filename cannot be empty.")
+    lib.update_metadata(img_id, **payload)
+    meta = lib.get_metadata(img_id)
+    return meta or {}
 
 
 @app.delete("/library/{img_id}")
@@ -363,6 +389,7 @@ class KeysUpdateBody(BaseModel):
     """Update stored API keys. Omit a field to leave it unchanged; use empty string to remove."""
 
     openai_api_key: str | None = None
+    openai_oauth_token: str | None = None
     fal_api_key: str | None = None
     gemini_api_key: str | None = None
     minimax_api_key: str | None = None
@@ -381,6 +408,7 @@ async def settings_keys_put(body: KeysUpdateBody) -> dict:
 
     return update_keys(
         openai_api_key=body.openai_api_key,
+        openai_oauth_token=body.openai_oauth_token,
         fal_api_key=body.fal_api_key,
         gemini_api_key=body.gemini_api_key,
         minimax_api_key=body.minimax_api_key,
@@ -399,6 +427,55 @@ async def settings_models_discover() -> dict:
     from game_images.model_catalog import discover_all
 
     return discover_all()
+
+
+class OpenAiOAuthStartBody(BaseModel):
+    redirect_port: int = 8000
+
+
+@app.post("/settings/oauth/openai/start")
+async def openai_oauth_start(body: OpenAiOAuthStartBody) -> dict:
+    """Return ChatGPT OAuth URL; opens browser to sign in."""
+    from game_images.openai_codex_oauth import start_login
+
+    port = max(1, min(65535, body.redirect_port))
+    return start_login(redirect_port=port)
+
+
+@app.get("/settings/oauth/openai/poll")
+async def openai_oauth_poll(state: str = Query(...)) -> dict:
+    from game_images.openai_codex_oauth import poll_login
+
+    return poll_login(state)
+
+
+@app.get("/auth/openai/callback", response_class=HTMLResponse)
+async def openai_oauth_callback(
+    state: str | None = Query(None),
+    code: str | None = Query(None),
+    error: str | None = Query(None),
+) -> str:
+    from game_images.openai_codex_oauth import (
+        ERROR_HTML,
+        SUCCESS_HTML,
+        complete_login,
+        fail_login,
+    )
+    from game_images.settings import save_openai_oauth_session
+
+    if error:
+        if state:
+            fail_login(state, error)
+        return ERROR_HTML.replace("{message}", error.replace("<", "&lt;"))
+    if not state or not code:
+        return ERROR_HTML.replace("{message}", "Missing authorization code.")
+    try:
+        tokens = complete_login(state, code)
+        save_openai_oauth_session(tokens)
+        return SUCCESS_HTML
+    except Exception as e:
+        fail_login(state, str(e))
+        return ERROR_HTML.replace("{message}", str(e).replace("<", "&lt;"))
 
 
 @app.get("/health")

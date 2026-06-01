@@ -11,10 +11,10 @@ from game_images.image_ops import tile_image as _tile_image
 from game_images.providers.base import Direction, Provider
 from game_images.providers.fal_provider import FalProvider
 from game_images.providers.openai_provider import OpenAIProvider
-from game_images.settings import get_fal_api_key, get_openai_api_key
+from game_images.settings import get_fal_api_key, get_openai_credential
 from game_images.texture_maps import generate_texture_map as _generate_texture_map
 
-ProviderName = Literal["openai", "fal"]
+ProviderName = Literal["openai", "fal", "gemini", "minimax"]
 _PROVIDERS: dict[ProviderName, type[Provider]] = {
     "openai": OpenAIProvider,
     "fal": FalProvider,
@@ -27,7 +27,7 @@ def get_provider(name: ProviderName, *, model: str | None = None) -> Provider:
     if cls is None:
         raise ValueError(f"Unknown provider: {name}. Choose from: {list(_PROVIDERS)}")
     if name == "openai":
-        return OpenAIProvider(model=model, api_key=get_openai_api_key())
+        return OpenAIProvider(model=model, api_key=get_openai_credential())
     if name == "fal":
         return FalProvider(api_key=get_fal_api_key())
     return cls()
@@ -79,7 +79,15 @@ def extend_image(
     model: str | None = None,
 ) -> bytes:
     """Extend the image in the given direction(s). Returns image bytes."""
-    provider = get_provider(provider_name, model=model)
+    if provider_name == "gemini":
+        from game_images.gemini_edit import extend_image_gemini
+
+        return extend_image_gemini(image, directions, amount_px, prompt, model=model)
+    if provider_name == "minimax":
+        raise ValueError(
+            "MiniMax does not support Extend. Choose OpenAI, Gemini, or Fal."
+        )
+    provider = get_provider(provider_name, model=model)  # type: ignore[arg-type]
     return provider.extend(
         image,
         directions,
@@ -99,7 +107,15 @@ def manipulate_image(
     model: str | None = None,
 ) -> bytes:
     """Edit the image (or masked region) according to the prompt. Returns image bytes."""
-    provider = get_provider(provider_name, model=model)
+    if provider_name == "gemini":
+        from game_images.gemini_edit import manipulate_image_gemini
+
+        return manipulate_image_gemini(image, prompt, mask=mask, model=model)
+    if provider_name == "minimax":
+        raise ValueError(
+            "MiniMax does not support Manipulate. Choose OpenAI, Gemini, or Fal."
+        )
+    provider = get_provider(provider_name, model=model)  # type: ignore[arg-type]
     return provider.manipulate(
         image,
         prompt,
@@ -129,6 +145,10 @@ def adjust_image(
     blur_radius: float = 0.0,
     rotate_degrees: float = 0.0,
     flip: str = "none",
+    resize_scale: float = 1.0,
+    resize_width: int = 0,
+    resize_height: int = 0,
+    resize_keep_aspect: bool = True,
 ) -> bytes:
     from game_images.image_ops import FlipMode
 
@@ -142,6 +162,10 @@ def adjust_image(
         blur_radius=blur_radius,
         rotate_degrees=rotate_degrees,
         flip=flip_mode,
+        resize_scale=resize_scale,
+        resize_width=resize_width,
+        resize_height=resize_height,
+        resize_keep_aspect=resize_keep_aspect,
     )
 
 

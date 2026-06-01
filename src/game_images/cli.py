@@ -65,6 +65,14 @@ def adjust(
     blur: float = typer.Option(0.0, "--blur", help="Gaussian blur radius."),
     rotate: float = typer.Option(0.0, "--rotate", help="Degrees."),
     flip: str = typer.Option("none", "--flip", help="none, x, y, or xy."),
+    resize_scale: float = typer.Option(
+        1.0, "--resize-scale", help="Uniform scale (1.0 = unchanged). Used if not 1.0."
+    ),
+    width: int = typer.Option(0, "--width", help="Target width in px (0 = ignore)."),
+    height: int = typer.Option(0, "--height", help="Target height in px (0 = ignore)."),
+    stretch: bool = typer.Option(
+        False, "--stretch", help="Stretch to exact width×height instead of fitting within."
+    ),
     output: Path = typer.Option(..., "--output", "-o", path_type=Path),
 ) -> None:
     """Traditional brightness/contrast/saturation and transforms."""
@@ -77,6 +85,10 @@ def adjust(
         blur_radius=blur,
         rotate_degrees=rotate,
         flip=flip,
+        resize_scale=resize_scale,
+        resize_width=width,
+        resize_height=height,
+        resize_keep_aspect=not stretch,
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(result)

@@ -82,8 +82,8 @@ def default_catalog() -> dict[str, Any]:
             },
             "gemini": {
                 "create": _entries(_GEMINI_IMAGE_CANDIDATES),
-                "extend": [],
-                "manipulate": [],
+                "extend": _entries(_GEMINI_IMAGE_CANDIDATES),
+                "manipulate": _entries(_GEMINI_IMAGE_CANDIDATES),
             },
             "minimax": {
                 "create": _entries(_MINIMAX_IMAGE_MODELS),
@@ -207,7 +207,9 @@ def discover_gemini() -> dict[str, list[dict[str, str]]]:
         elif "2.5-flash-image" in mid:
             label = labels.get(mid, "Nano Banana")
         create.append(_entry(mid, label))
-    return {"create": create} if create else {}
+    if not create:
+        return {}
+    return {"create": create, "extend": list(create), "manipulate": list(create)}
 
 
 def discover_minimax() -> dict[str, list[dict[str, str]]]:

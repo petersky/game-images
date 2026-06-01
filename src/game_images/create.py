@@ -12,7 +12,7 @@ from PIL import Image
 
 from game_images.gemini_image import create_image_gemini
 from game_images.minimax_image import create_image_minimax
-from game_images.settings import get_fal_api_key, get_openai_api_key
+from game_images.settings import get_fal_api_key, get_openai_credential
 
 ProviderName = Literal["openai", "fal", "gemini", "minimax"]
 
@@ -196,7 +196,7 @@ def create_image(
         raise ValueError("Prompt is required")
     if provider_name == "openai":
         return create_image_openai(
-            prompt, width, height, model=model, api_key=get_openai_api_key()
+            prompt, width, height, model=model, api_key=get_openai_credential()
         )
     if provider_name == "fal":
         return create_image_fal(prompt, width, height, api_key=get_fal_api_key())

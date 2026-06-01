@@ -1,6 +1,39 @@
 """Unit tests for local image ops (no API keys)."""
 
+import io
+
+from PIL import Image
+
 from game_images.core import adjust_image, generate_texture_map, tile_image
+
+
+def _rgb_png(w: int, h: int) -> bytes:
+    buf = io.BytesIO()
+    Image.new("RGB", (w, h), color=(10, 20, 30)).save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def test_adjust_resize_scale() -> None:
+    raw = _rgb_png(200, 100)
+    out = adjust_image(raw, resize_scale=0.5)
+    img = Image.open(io.BytesIO(out))
+    assert img.size == (100, 50)
+
+
+def test_adjust_resize_fit_within() -> None:
+    raw = _rgb_png(400, 200)
+    out = adjust_image(raw, resize_width=100, resize_height=100, resize_keep_aspect=True)
+    img = Image.open(io.BytesIO(out))
+    assert img.size == (100, 50)
+
+
+def test_adjust_resize_stretch() -> None:
+    raw = _rgb_png(400, 200)
+    out = adjust_image(
+        raw, resize_width=64, resize_height=32, resize_keep_aspect=False, resize_scale=1.0
+    )
+    img = Image.open(io.BytesIO(out))
+    assert img.size == (64, 32)
 
 
 def test_adjust_and_tile_roundtrip() -> None:
