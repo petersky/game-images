@@ -116,18 +116,31 @@ Built-in types register capabilities used to show or hide Edit tools:
 | Type | Extends | Extra capabilities |
 |------|---------|-------------------|
 | Image | — | All standard image edit tools |
-| Texture | Image | Maps, seamless tiling workflows |
-| Skydome | Image | Skydome preview / lightmap hooks (phase 2 UI) |
+| Texture | Image | Maps, seamless 2×2 preview, maps bundle |
+| Skydome | Image | Equirectangular interior preview, lightmap stub |
 | Background | Image | Same as Image today |
 
 Import or assign a type in Library. Results inherit the source asset’s type when saved.
+
+**Texture tools (Edit → Maps):** **Generate maps bundle** saves normal and roughness maps as linked library assets. When a project is open, derivatives are added with roles (`normal`, `roughness`) and `source_id` links back to the albedo.
+
+**Preview modes** (Preview panel, when the asset type supports them):
+
+| Mode | Asset types | Purpose |
+|------|-------------|---------|
+| Flat | All | Standard preview |
+| Seamless 2×2 | Texture | Tile continuity check |
+| Equirectangular (interior) | Skydome | Inside-sphere horizon preview |
+
+**Skydome:** lightmap export is stubbed (`501`) until implemented.
 
 To add a type in code, register an `AssetTypeDefinition` in `game_images/asset_types/builtin.py` (entry points planned for later).
 
 ### Projects
 
-- **Projects page**: create projects, view assets grouped by type, add/remove library members.
+- **Projects page**: create projects, view assets grouped by type, add/remove library members, assign **roles** (albedo, normal, roughness, skydome_main, …).
 - **Library**: filter by project; each thumbnail shows project chips.
+- Derivative maps show **← from** parent filename when `source_id` is set.
 - Deleting a project removes membership only — assets stay in the library.
 
 **Zoom** — zoom out uses uniform outpaint (same idea as Extend on all sides). Zoom in crops using the dashed Preview box; optional **Enhance** runs inpaint on the crop without a mask.

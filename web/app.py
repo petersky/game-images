@@ -338,6 +338,76 @@ async def api_maps(
     return Response(content=result, media_type="image/png")
 
 
+_MAP_BUNDLE_SPECS = (
+    ("normal", "normal", "_normal"),
+    ("roughness", "roughness", "_roughness"),
+)
+
+
+@app.post("/maps/bundle")
+async def api_maps_bundle(
+    image: UploadFile = File(...),
+    source_id: str | None = Form(None),
+    project_id: str | None = Form(None),
+    strength: float = Form(1.0),
+) -> dict:
+    """Generate normal + roughness maps, save to library, optionally link in a project."""
+    _, _, _, _, _, _, _, generate_texture_map_fn, _ = _core()
+    body = await image.read()
+    if not body:
+        raise HTTPException(status_code=400, detail="No image data received.")
+    png_bytes = normalize_upload_to_png(body)
+    lib = _get_library()
+    store = _get_projects()
+    inherited_type = lib.asset_type_for_source(source_id)
+    stem = "texture"
+    if source_id:
+        src_meta = lib.get_metadata(source_id)
+        if src_meta and src_meta.get("filename"):
+            stem = src_meta["filename"].rsplit(".", 1)[0]
+    saved: list[dict] = []
+    try:
+        for map_type, role, suffix in _MAP_BUNDLE_SPECS:
+            result = generate_texture_map_fn(png_bytes, map_type, strength=strength)
+            filename = f"{stem}{suffix}.png"
+            img_id = lib.add_image(
+                result,
+                filename,
+                "image",
+                prompt=f"map:{map_type}",
+                source_id=source_id or None,
+                asset_type_id=inherited_type,
+            )
+            if project_id:
+                if store.get_project(project_id) is None:
+                    raise HTTPException(status_code=404, detail="Project not found")
+                store.add_asset(project_id, img_id, role=role)
+            meta = lib.get_metadata(img_id)
+            saved.append(
+                {
+                    "id": img_id,
+                    "map_type": map_type,
+                    "role": role,
+                    "metadata": meta,
+                }
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        status, detail = _handle_provider_error(e)
+        raise HTTPException(status_code=status, detail=detail)
+    return {"maps": saved, "source_id": source_id, "project_id": project_id}
+
+
+@app.post("/skydome/lightmap")
+async def skydome_lightmap_stub() -> dict:
+    """Placeholder for skydome lightmap export (phase 2+)."""
+    raise HTTPException(
+        status_code=501,
+        detail="Lightmap generation is not implemented yet. Use Edit tools to refine the skydome image for now.",
+    )
+
+
 @app.get("/asset-types")
 async def asset_types_list() -> list:
     from game_images.asset_types import get_asset_type_registry
@@ -362,6 +432,11 @@ class ProjectUpdateBody(BaseModel):
 
 class ProjectAssetBody(BaseModel):
     asset_id: str
+    role: str | None = None
+    sort_order: int | None = None
+
+
+class ProjectAssetUpdateBody(BaseModel):
     role: str | None = None
     sort_order: int | None = None
 
@@ -421,6 +496,20 @@ async def projects_remove_asset(project_id: str, asset_id: str) -> dict:
     if not _get_projects().remove_asset(project_id, asset_id):
         raise HTTPException(status_code=404, detail="Project or asset membership not found")
     return {"removed": asset_id, "project_id": project_id}
+
+
+@app.patch("/projects/{project_id}/assets/{asset_id}")
+async def projects_update_asset(
+    project_id: str, asset_id: str, body: ProjectAssetUpdateBody
+) -> dict:
+    payload = body.model_dump(exclude_unset=True)
+    if not payload:
+        raise HTTPException(status_code=400, detail="No fields to update.")
+    store = _get_projects()
+    if not store.update_asset(project_id, asset_id, **payload):
+        raise HTTPException(status_code=404, detail="Project or asset membership not found")
+    project = store.get_project(project_id)
+    return project or {}
 
 
 @app.get("/library")

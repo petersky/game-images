@@ -92,3 +92,26 @@ def test_result_inherits_asset_type(library: Library) -> None:
     meta = library.get_metadata(result_id)
     assert meta is not None
     assert meta["asset_type_id"] == "texture"
+
+
+def test_update_asset_role(library: Library, projects: ProjectStore) -> None:
+    img_id = library.add_image(_tiny_png(), "a.png", "image", asset_type_id="texture")
+    project = projects.create_project("Roles")
+    projects.add_asset(project["id"], img_id, role="albedo")
+    assert projects.update_asset(project["id"], img_id, role="normal")
+    detail = projects.get_project(project["id"])
+    assert detail is not None
+    assert detail["assets"][0]["role"] == "normal"
+
+
+def test_project_asset_lists_source_id(library: Library, projects: ProjectStore) -> None:
+    src = library.add_image(_tiny_png(), "albedo.png", "image", asset_type_id="texture")
+    derived = library.add_image(
+        _tiny_png(), "albedo_normal.png", "image", source_id=src, asset_type_id="texture"
+    )
+    project = projects.create_project("Derivatives")
+    projects.add_asset(project["id"], src, role="albedo")
+    projects.add_asset(project["id"], derived, role="normal")
+    assets = projects.list_project_assets(project["id"])
+    by_id = {a["asset_id"]: a for a in assets}
+    assert by_id[derived]["source_id"] == src

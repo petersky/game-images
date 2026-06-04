@@ -293,6 +293,37 @@
       object-fit: contain;
       display: block;
     }
+    .previewImageWrap canvas {
+      max-width: 100%;
+      max-height: 320px;
+      width: auto;
+      height: auto;
+      display: block;
+    }
+    .previewModeBar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.8125rem;
+    }
+    .previewModeBar label { margin: 0; color: var(--muted); white-space: nowrap; }
+    .previewModeBar select { margin: 0; flex: 1; min-width: 0; }
+    .projectAssetRole {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-left: 0.35rem;
+    }
+    .projectAssetRole select {
+      font-size: 0.75rem;
+      padding: 0.15rem 0.35rem;
+      margin-left: 0.25rem;
+    }
+    .projectAssetDerived {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-left: 0.35rem;
+    }
     .previewMeta {
       margin-top: 0.75rem;
       font-size: 0.8125rem;
@@ -680,6 +711,17 @@
               <p id="projectDetailNotes" class="helpText"></p>
             </div>
             <div class="projectsToolbar">
+              <select id="projectAddRole" title="Asset role in project" style="margin-bottom: 0;">
+                <option value="">No role</option>
+                <option value="albedo">Albedo</option>
+                <option value="normal">Normal</option>
+                <option value="roughness">Roughness</option>
+                <option value="bump">Bump</option>
+                <option value="height">Height</option>
+                <option value="ao">Ambient occlusion</option>
+                <option value="skydome_main">Skydome main</option>
+                <option value="background">Background</option>
+              </select>
               <button type="button" id="projectAddAssetBtn" class="secondary">Add from library…</button>
               <button type="button" id="projectDeleteBtn" class="secondary">Delete project</button>
             </div>
@@ -875,8 +917,20 @@
           <label>Strength <span id="mapStrengthVal">1.0</span></label>
           <input type="range" id="mapStrength" min="0.3" max="2.5" step="0.1" value="1" />
                   <p class="helpText">Procedural maps from luminance. Each result is saved to the library automatically.</p>
+                  <button type="button" id="mapsBundleBtn" class="secondary">Generate maps bundle (normal + roughness)</button>
+                  <p class="helpText">Bundle saves linked normal and roughness maps to the library. If the active image is in a project, derivatives are added with roles.</p>
                 </section>
                 <p id="errorMaps" class="error" style="display: none;"></p>
+              </div>
+
+              <div id="editSkydomeTools" class="editToolPane" style="display: none;">
+                <section class="formSection">
+                  <h2 class="areaTitle">Skydome tools</h2>
+                  <p class="helpText">Use equirectangular preview mode in the Preview panel to check horizon continuity.</p>
+                  <button type="button" id="skydomeLightmapBtn" class="secondary">Generate lightmap (coming soon)</button>
+                  <p class="helpText">Lightmap export will bake diffuse lighting from the skydome. Not yet implemented.</p>
+                </section>
+                <p id="errorSkydome" class="error" style="display: none;"></p>
               </div>
 
               <div id="editToolPrepare" class="editToolPane" data-tool="prepare">
@@ -1012,10 +1066,19 @@
 
           <aside class="previewSection">
             <h2>Preview</h2>
+            <div id="previewModeBar" class="previewModeBar" style="display: none;">
+              <label for="previewMode">Mode</label>
+              <select id="previewMode">
+                <option value="flat">Flat</option>
+                <option value="seamless_2x2">Seamless 2×2</option>
+                <option value="equirectangular">Equirectangular (interior)</option>
+              </select>
+            </div>
             <div id="previewPlaceholder" class="previewPlaceholder">Select or create an image to preview</div>
             <div id="previewContent" style="display: none;">
               <div class="previewImageWrap">
                 <img id="previewImg" alt="Active image" />
+                <canvas id="previewCanvas" style="display: none;" aria-hidden="true"></canvas>
                 <div id="previewCropOverlay" class="previewCropOverlay" aria-hidden="true"></div>
               </div>
               <dl class="previewMeta" id="previewMeta"></dl>
@@ -1170,6 +1233,7 @@
     const previewPlaceholder = document.getElementById('previewPlaceholder');
     const previewContent = document.getElementById('previewContent');
     const previewImg = document.getElementById('previewImg');
+    const previewCanvas = document.getElementById('previewCanvas');
     const previewMeta = document.getElementById('previewMeta');
     const applyShiftBtn = document.getElementById('applyShiftBtn');
     const topBarStatusText = document.getElementById('topBarStatusText');
@@ -1209,6 +1273,24 @@
     let activeAssetTypeId = 'generic_image';
     let activeProjectId = null;
     let projectsView = 'list';
+    let previewMode = 'flat';
+
+    const PREVIEW_MODE_LABELS = {
+      flat: 'Flat',
+      seamless_2x2: 'Seamless 2×2',
+      equirectangular: 'Equirectangular (interior)',
+    };
+    const PROJECT_ROLES = [
+      { value: '', label: 'No role' },
+      { value: 'albedo', label: 'Albedo' },
+      { value: 'normal', label: 'Normal' },
+      { value: 'roughness', label: 'Roughness' },
+      { value: 'bump', label: 'Bump' },
+      { value: 'height', label: 'Height' },
+      { value: 'ao', label: 'Ambient occlusion' },
+      { value: 'skydome_main', label: 'Skydome main' },
+      { value: 'background', label: 'Background' },
+    ];
 
     const EDIT_TOOL_CAPABILITIES = {
       adjust: 'image.adjust',
@@ -1309,6 +1391,154 @@
         card.style.display = anyVisible ? '' : 'none';
       });
       updateEditAssetTypeBanner();
+      updatePreviewModeBar();
+      updateSkydomeToolsVisibility();
+    }
+
+    function previewModesForAssetType(typeId) {
+      const t = assetTypeCatalog.find(function(x) { return x.id === typeId; });
+      const modes = (t && t.preview_modes && t.preview_modes.length) ? t.preview_modes : ['flat'];
+      return modes;
+    }
+
+    function updatePreviewModeBar() {
+      const bar = document.getElementById('previewModeBar');
+      const sel = document.getElementById('previewMode');
+      if (!bar || !sel) return;
+      const modes = previewModesForAssetType(activeAssetTypeId);
+      const show = modes.length > 1 && workingImageBlob && previewContent.style.display !== 'none';
+      bar.style.display = show ? 'flex' : 'none';
+      if (!show) {
+        previewMode = 'flat';
+        applyPreviewDisplayMode();
+        return;
+      }
+      const prev = previewMode;
+      sel.innerHTML = '';
+      modes.forEach(function(m) {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = PREVIEW_MODE_LABELS[m] || m;
+        sel.appendChild(opt);
+      });
+      if (modes.indexOf(prev) !== -1) {
+        sel.value = prev;
+      } else {
+        sel.value = modes[0];
+        previewMode = modes[0];
+      }
+      applyPreviewDisplayMode();
+    }
+
+    function updateSkydomeToolsVisibility() {
+      const el = document.getElementById('editSkydomeTools');
+      if (!el) return;
+      const show = mainArea === 'edit' && hasAssetCapability(activeAssetTypeId, 'skydome.lightmap');
+      el.style.display = show ? 'block' : 'none';
+    }
+
+    function applyPreviewDisplayMode() {
+      if (!previewCanvas) return;
+      const useCanvas = previewMode !== 'flat' && previewImg.naturalWidth > 0;
+      previewImg.style.display = useCanvas ? 'none' : 'block';
+      previewCanvas.style.display = useCanvas ? 'block' : 'none';
+      if (useCanvas) renderSpecialPreview();
+    }
+
+    function renderSpecialPreview() {
+      if (!previewCanvas || !previewImg.naturalWidth) return;
+      const img = previewImg;
+      const iw = img.naturalWidth;
+      const ih = img.naturalHeight;
+      if (previewMode === 'seamless_2x2') {
+        const maxSide = 640;
+        const scale = Math.min(1, maxSide / Math.max(iw * 2, ih * 2));
+        previewCanvas.width = Math.round(iw * 2 * scale);
+        previewCanvas.height = Math.round(ih * 2 * scale);
+        const ctx = previewCanvas.getContext('2d');
+        const dw = Math.round(iw * scale);
+        const dh = Math.round(ih * scale);
+        ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+        for (let row = 0; row < 2; row++) {
+          for (let col = 0; col < 2; col++) {
+            ctx.drawImage(img, col * dw, row * dh, dw, dh);
+          }
+        }
+      } else if (previewMode === 'equirectangular') {
+        const cw = 320;
+        const ch = 180;
+        previewCanvas.width = cw;
+        previewCanvas.height = ch;
+        const ctx = previewCanvas.getContext('2d');
+        const off = document.createElement('canvas');
+        off.width = iw;
+        off.height = ih;
+        off.getContext('2d').drawImage(img, 0, 0);
+        const srcData = off.getContext('2d').getImageData(0, 0, iw, ih);
+        const out = ctx.createImageData(cw, ch);
+        for (let py = 0; py < ch; py++) {
+          for (let px = 0; px < cw; px++) {
+            const nx = (px / cw - 0.5) * 2;
+            const ny = (py / ch - 0.5) * 2 * (ch / cw);
+            const len = Math.sqrt(nx * nx + ny * ny + 1);
+            const dx = nx / len;
+            const dy = ny / len;
+            const dirZ = 1 / len;
+            const theta = Math.atan2(dx, dirZ);
+            const phi = Math.asin(Math.max(-1, Math.min(1, dy)));
+            let u = (theta / (2 * Math.PI)) + 0.5;
+            let v = 0.5 - phi / Math.PI;
+            u = u - Math.floor(u);
+            v = Math.max(0, Math.min(1, v));
+            const sx = Math.min(iw - 1, Math.max(0, Math.floor(u * iw)));
+            const sy = Math.min(ih - 1, Math.max(0, Math.floor(v * ih)));
+            const si = (sy * iw + sx) * 4;
+            const oi = (py * cw + px) * 4;
+            out.data[oi] = srcData.data[si];
+            out.data[oi + 1] = srcData.data[si + 1];
+            out.data[oi + 2] = srcData.data[si + 2];
+            out.data[oi + 3] = 255;
+          }
+        }
+        ctx.putImageData(out, 0, 0);
+      }
+    }
+
+    function projectRoleLabel(role) {
+      const r = PROJECT_ROLES.find(function(x) { return x.value === role; });
+      return r ? r.label : (role || '');
+    }
+
+    function createProjectRoleSelect(projectId, assetId, currentRole) {
+      const sel = document.createElement('select');
+      sel.className = 'projectAssetRoleSelect';
+      PROJECT_ROLES.forEach(function(r) {
+        const opt = document.createElement('option');
+        opt.value = r.value;
+        opt.textContent = r.label;
+        sel.appendChild(opt);
+      });
+      sel.value = currentRole || '';
+      sel.addEventListener('change', async function() {
+        try {
+          const r = await apiFetch('/projects/' + projectId + '/assets/' + assetId, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: sel.value || null }),
+          });
+          if (!r.ok) throw new Error('Could not update role');
+          showProjectDetail(projectId);
+        } catch (err) {
+          showProjectsError(err.message);
+        }
+      });
+      return sel;
+    }
+
+    function sourceAssetLabel(assets, sourceId) {
+      const parent = assets.find(function(a) { return a.asset_id === sourceId; });
+      if (parent && parent.filename) return parent.filename;
+      return sourceId ? sourceId.slice(0, 8) : '';
     }
 
     function updateEditAssetTypeBanner() {
@@ -1404,6 +1634,17 @@
             const label = document.createElement('span');
             label.textContent = a.filename || a.asset_id.slice(0, 8);
             li.appendChild(label);
+            const roleWrap = document.createElement('span');
+            roleWrap.className = 'projectAssetRole';
+            roleWrap.textContent = 'Role:';
+            roleWrap.appendChild(createProjectRoleSelect(projectId, a.asset_id, a.role));
+            li.appendChild(roleWrap);
+            if (a.source_id) {
+              const derived = document.createElement('span');
+              derived.className = 'projectAssetDerived';
+              derived.textContent = '← from ' + sourceAssetLabel(assets, a.source_id);
+              li.appendChild(derived);
+            }
             const openBtn = document.createElement('button');
             openBtn.type = 'button';
             openBtn.className = 'secondary';
@@ -1481,10 +1722,12 @@
         showProjectsError('Save the image to the library before adding to a project.');
         return;
       }
+      const roleEl = document.getElementById('projectAddRole');
+      const role = roleEl ? roleEl.value : '';
       const r = await apiFetch('/projects/' + projectId + '/assets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ asset_id: selectedLibraryId }),
+        body: JSON.stringify({ asset_id: selectedLibraryId, role: role || null }),
       });
       if (!r.ok) throw new Error('Could not add asset');
       showProjectDetail(projectId);
@@ -2295,6 +2538,8 @@
         activeImageDimsEl.textContent = dimStr;
         updateAdjustSizeHint();
         updateActiveImageBar();
+        updatePreviewModeBar();
+        applyPreviewDisplayMode();
       };
       previewImg.removeAttribute('src');
       previewObjectUrl = URL.createObjectURL(blob);
@@ -2840,6 +3085,7 @@
       }
       if (area === 'edit') {
         applyEditToolGating();
+        updateSkydomeToolsVisibility();
       }
       topBarDownloadLink.style.display = lastResultUrl ? 'inline-block' : 'none';
       updateRunButton();
@@ -2893,6 +3139,59 @@
 
     document.getElementById('libraryFilterType').addEventListener('change', refreshLibraryGrid);
     document.getElementById('libraryFilterProject').addEventListener('change', refreshLibraryGrid);
+    document.getElementById('previewMode').addEventListener('change', function() {
+      previewMode = this.value;
+      applyPreviewDisplayMode();
+    });
+    document.getElementById('mapsBundleBtn').addEventListener('click', async function() {
+      if (!workingImageBlob) {
+        setStatus('Select an image first.', false);
+        return;
+      }
+      const btn = this;
+      const errEl = document.getElementById('errorMaps');
+      clearApiError(errEl);
+      btn.disabled = true;
+      setStatus('Generating maps bundle…', true);
+      try {
+        const formData = new FormData();
+        formData.append('image', workingImageBlob, 'image.png');
+        if (selectedLibraryId) formData.append('source_id', selectedLibraryId);
+        if (activeProjectId) formData.append('project_id', activeProjectId);
+        formData.append('strength', document.getElementById('mapStrength').value);
+        const res = await apiFetch('/maps/bundle', { method: 'POST', body: formData });
+        if (!res.ok) {
+          const err = await res.json().catch(function() { return {}; });
+          throw apiErrorToError(parseApiError(res, err, '/maps/bundle'));
+        }
+        const data = await res.json();
+        const count = (data.maps || []).length;
+        refreshLibraryGrid();
+        if (activeProjectId) showProjectDetail(activeProjectId);
+        setStatus('Maps bundle saved (' + count + ' assets).', false);
+      } catch (err) {
+        const info = errorInfoFromThrown(err);
+        setStatus(info.summary, false);
+        showApiError(errEl, info);
+      }
+      btn.disabled = false;
+    });
+    document.getElementById('skydomeLightmapBtn').addEventListener('click', async function() {
+      const errEl = document.getElementById('errorSkydome');
+      clearApiError(errEl);
+      try {
+        const res = await apiFetch('/skydome/lightmap', { method: 'POST' });
+        if (!res.ok) {
+          const err = await res.json().catch(function() { return {}; });
+          throw apiErrorToError(parseApiError(res, err, '/skydome/lightmap'));
+        }
+        setStatus('Lightmap generated.', false);
+      } catch (err) {
+        const info = errorInfoFromThrown(err);
+        setStatus(info.summary, false);
+        showApiError(errEl, info);
+      }
+    });
     document.getElementById('librarySetTypeBtn').addEventListener('click', async function() {
       if (!selectedLibraryId) return;
       const typeId = document.getElementById('librarySelectedAssetType').value;

@@ -159,12 +159,44 @@ class ProjectStore:
                 )
             return cur.rowcount > 0
 
+    def update_asset(
+        self,
+        project_id: str,
+        asset_id: str,
+        *,
+        role: str | None = None,
+        sort_order: int | None = None,
+    ) -> bool:
+        updates: dict[str, Any] = {}
+        if role is not None:
+            updates["role"] = role.strip() or None
+        if sort_order is not None:
+            updates["sort_order"] = sort_order
+        if not updates:
+            return self.get_project(project_id) is not None and any(
+                a["asset_id"] == asset_id
+                for a in self.list_project_assets(project_id)
+            )
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        values = list(updates.values()) + [project_id, asset_id]
+        with self._conn() as conn:
+            cur = conn.execute(
+                f"UPDATE project_assets SET {set_clause} WHERE project_id = ? AND asset_id = ?",
+                values,
+            )
+            if cur.rowcount:
+                conn.execute(
+                    "UPDATE projects SET updated_at = ? WHERE id = ?",
+                    (_utc_now(), project_id),
+                )
+            return cur.rowcount > 0
+
     def list_project_assets(self, project_id: str) -> list[dict[str, Any]]:
         with self._conn() as conn:
             rows = conn.execute(
                 """
                 SELECT pa.*, i.filename, i.type, i.width, i.height, i.asset_type_id,
-                    i.created_at AS asset_created_at
+                    i.source_id, i.created_at AS asset_created_at
                 FROM project_assets pa
                 JOIN images i ON i.id = pa.asset_id
                 WHERE pa.project_id = ?
