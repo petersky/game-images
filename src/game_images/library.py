@@ -14,6 +14,7 @@ from PIL import Image
 ImageType = Literal["image", "mask", "result"]
 
 _INVALID_FILENAME_CHARS = '<>:"/\\|?*\0'
+DEFAULT_ASSET_TYPE_ID = "generic_image"
 
 
 def sanitize_filename(name: str) -> str:
@@ -86,6 +87,42 @@ class Library:
                     extra TEXT
                 )
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS projects (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    slug TEXT,
+                    notes TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT,
+                    extra TEXT
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS project_assets (
+                    project_id TEXT NOT NULL,
+                    asset_id TEXT NOT NULL,
+                    added_at TEXT NOT NULL,
+                    role TEXT,
+                    sort_order INTEGER,
+                    PRIMARY KEY (project_id, asset_id)
+                )
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_project_assets_asset
+                ON project_assets(asset_id)
+            """)
+            self._migrate_schema(conn)
+
+    def _migrate_schema(self, conn: sqlite3.Connection) -> None:
+        cols = {
+            row[1]
+            for row in conn.execute("PRAGMA table_info(images)").fetchall()
+        }
+        if "asset_type_id" not in cols:
+            conn.execute(
+                "ALTER TABLE images ADD COLUMN asset_type_id TEXT NOT NULL DEFAULT 'generic_image'"
+            )
 
     def _row_to_dict(self, row: sqlite3.Row) -> dict:
         d = dict(row)
@@ -94,7 +131,29 @@ class Library:
                 d["extra"] = json.loads(d["extra"])
             except (json.JSONDecodeError, TypeError):
                 d["extra"] = None
+        d.setdefault("asset_type_id", DEFAULT_ASSET_TYPE_ID)
         return d
+
+    def _attach_projects(self, conn: sqlite3.Connection, items: list[dict]) -> None:
+        if not items:
+            return
+        ids = [item["id"] for item in items]
+        placeholders = ",".join("?" * len(ids))
+        rows = conn.execute(
+            f"""
+            SELECT pa.asset_id, p.id, p.name
+            FROM project_assets pa
+            JOIN projects p ON p.id = pa.project_id
+            WHERE pa.asset_id IN ({placeholders})
+            ORDER BY p.name ASC
+            """,
+            ids,
+        ).fetchall()
+        by_asset: dict[str, list[dict]] = {i: [] for i in ids}
+        for row in rows:
+            by_asset.setdefault(row[0], []).append({"id": row[1], "name": row[2]})
+        for item in items:
+            item["projects"] = by_asset.get(item["id"], [])
 
     def add_image(
         self,
@@ -110,11 +169,15 @@ class Library:
         tags: str | None = None,
         notes: str | None = None,
         extra: dict | None = None,
+        asset_type_id: str | None = None,
     ) -> str:
         """Add image to library. Returns id."""
         img_id = str(uuid.uuid4())
         file_path = self.images_dir / f"{img_id}.png"
         filename = sanitize_filename(filename or f"{img_id}.png")
+        resolved_type = asset_type_id or DEFAULT_ASSET_TYPE_ID
+        if type == "mask":
+            resolved_type = DEFAULT_ASSET_TYPE_ID
 
         # Normalize to PNG
         png_bytes = self._normalize_to_png(data)
@@ -134,8 +197,8 @@ class Library:
             conn.execute(
                 """
                 INSERT INTO images (id, filename, type, width, height, created_at,
-                    prompt, source_id, mask_id, tags, notes, extra)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    prompt, source_id, mask_id, tags, notes, extra, asset_type_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     img_id,
@@ -144,7 +207,13 @@ class Library:
                     width,
                     height,
                     created_at,
-                    prompt, source_id, mask_id, tags, notes, extra_json,
+                    prompt,
+                    source_id,
+                    mask_id,
+                    tags,
+                    notes,
+                    extra_json,
+                    resolved_type,
                 ),
             )
         return img_id
@@ -164,29 +233,44 @@ class Library:
         self,
         type: ImageType | str | None = None,
         tag: str | None = None,
+        asset_type: str | None = None,
+        project_id: str | None = None,
     ) -> list[dict]:
-        """List images with optional filters. type can be 'image','mask','result' or comma-separated."""
+        """List images with optional filters."""
         with sqlite3.connect(self._db_path) as conn:
             conn.row_factory = sqlite3.Row
             conditions = []
             params: list = []
+            join = ""
             if type:
                 types = [t.strip() for t in str(type).split(",") if t.strip()]
                 if types:
                     placeholders = ",".join("?" * len(types))
-                    conditions.append(f"type IN ({placeholders})")
+                    conditions.append(f"i.type IN ({placeholders})")
                     params.extend(types)
             if tag:
                 conditions.append(
-                    "(tags LIKE ? OR tags LIKE ? OR tags LIKE ? OR tags = ?)"
+                    "(i.tags LIKE ? OR i.tags LIKE ? OR i.tags LIKE ? OR i.tags = ?)"
                 )
                 params.extend([f"%{tag}%", f"{tag},%", f"%,{tag}", tag])
+            if asset_type:
+                types_at = [t.strip() for t in asset_type.split(",") if t.strip()]
+                if types_at:
+                    placeholders = ",".join("?" * len(types_at))
+                    conditions.append(f"i.asset_type_id IN ({placeholders})")
+                    params.extend(types_at)
+            if project_id:
+                join = "JOIN project_assets pa ON pa.asset_id = i.id"
+                conditions.append("pa.project_id = ?")
+                params.append(project_id)
             where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
             cursor = conn.execute(
-                f"SELECT * FROM images {where} ORDER BY created_at DESC",
+                f"SELECT i.* FROM images i {join} {where} ORDER BY i.created_at DESC",
                 params,
             )
-            return [self._row_to_dict(row) for row in cursor.fetchall()]
+            items = [self._row_to_dict(row) for row in cursor.fetchall()]
+            self._attach_projects(conn, items)
+            return items
 
     def get_image(self, img_id: str) -> bytes | None:
         """Get image bytes by id."""
@@ -204,7 +288,9 @@ class Library:
             ).fetchone()
             if row is None:
                 return None
-            return self._row_to_dict(row)
+            item = self._row_to_dict(row)
+            self._attach_projects(conn, [item])
+            return item
 
     def rename(self, img_id: str, filename: str) -> bool:
         """Rename the display filename for a library item."""
@@ -212,7 +298,7 @@ class Library:
 
     def update_metadata(self, img_id: str, **kwargs: str | int | dict | None) -> bool:
         """Update metadata fields. Returns True if found."""
-        allowed = {"filename", "prompt", "tags", "notes", "extra"}
+        allowed = {"filename", "prompt", "tags", "notes", "extra", "asset_type_id"}
         updates = {k: v for k, v in kwargs.items() if k in allowed and v is not None}
         if "filename" in updates:
             updates["filename"] = sanitize_filename(str(updates["filename"]))
@@ -235,5 +321,14 @@ class Library:
         if path.exists():
             path.unlink()
         with sqlite3.connect(self._db_path) as conn:
+            conn.execute("DELETE FROM project_assets WHERE asset_id = ?", (img_id,))
             cur = conn.execute("DELETE FROM images WHERE id = ?", (img_id,))
             return cur.rowcount > 0
+
+    def asset_type_for_source(self, source_id: str | None) -> str:
+        if not source_id:
+            return DEFAULT_ASSET_TYPE_ID
+        meta = self.get_metadata(source_id)
+        if not meta:
+            return DEFAULT_ASSET_TYPE_ID
+        return meta.get("asset_type_id") or DEFAULT_ASSET_TYPE_ID

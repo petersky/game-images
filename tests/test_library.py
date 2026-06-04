@@ -28,6 +28,15 @@ def test_sanitize_filename_removes_invalid_chars() -> None:
     assert sanitize_filename('bad<>name.png') == "badname.png"
 
 
+def test_library_asset_type_update(tmp_path: Path) -> None:
+    lib = Library(root=tmp_path)
+    img_id = lib.add_image(_tiny_png(), "x.png", "image")
+    lib.update_metadata(img_id, asset_type_id="skydome")
+    meta = lib.get_metadata(img_id)
+    assert meta is not None
+    assert meta["asset_type_id"] == "skydome"
+
+
 def test_library_rename(tmp_path: Path) -> None:
     lib = Library(root=tmp_path)
     img_id = lib.add_image(_tiny_png(), "original.png", "image")

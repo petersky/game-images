@@ -398,8 +398,51 @@
       line-height: 1.2;
     }
     .libraryItemName:hover { color: var(--text); }
-    .libraryImportRow { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
+    .libraryImportRow { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; }
     .libraryImportRow input[type="file"] { width: auto; margin-bottom: 0; }
+    .libraryFilters { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem; align-items: flex-end; }
+    .libraryFilters label { margin-bottom: 0.15rem; font-size: 0.75rem; }
+    .libraryFilters select { margin-bottom: 0; min-width: 10rem; }
+    .libraryItemBadges { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.25rem; }
+    .assetBadge, .projectBadge {
+      font-size: 0.65rem;
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      background: rgba(122, 162, 247, 0.2);
+      color: var(--accent);
+    }
+    .projectBadge { background: rgba(158, 206, 106, 0.15); color: #9ece6a; }
+    .projectsPane { max-width: 960px; }
+    .projectsToolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .projectGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
+    .projectCard {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem;
+      background: var(--surface);
+      cursor: pointer;
+    }
+    .projectCard:hover { border-color: var(--accent); }
+    .projectCard h3 { margin: 0 0 0.35rem 0; font-size: 1rem; }
+    .projectCardMeta { font-size: 0.8125rem; color: var(--muted); }
+    .projectDetailHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .projectAssetGroup { margin-bottom: 1rem; }
+    .projectAssetGroup h4 { margin: 0 0 0.5rem 0; font-size: 0.9375rem; color: var(--muted); }
+    .projectAssetList { list-style: none; padding: 0; margin: 0; }
+    .projectAssetList li {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.35rem 0; border-bottom: 1px solid var(--border);
+    }
+    .projectAssetList li button { margin-left: auto; }
+    .editAssetTypeBanner {
+      font-size: 0.875rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+      padding: 0.4rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.12);
+    }
     .activeImageBar {
       display: flex;
       align-items: center;
@@ -565,6 +608,7 @@
       <button type="button" id="sidebarToggle" class="sidebarToggle" aria-label="Collapse sidebar" title="Collapse sidebar">&#9664;</button>
       <ul class="sidebarNav">
         <li><button type="button" class="sidebarItem active" data-area="library" data-first="L" title="Library"><span>Library</span></button></li>
+        <li><button type="button" class="sidebarItem" data-area="projects" data-first="P" title="Projects"><span>Projects</span></button></li>
         <li><button type="button" class="sidebarItem" data-area="create" data-first="C" title="Create"><span>Create</span></button></li>
         <li><button type="button" class="sidebarItem" id="sidebarEditBtn" data-area="edit" data-first="E" title="Edit" disabled><span>Edit</span></button></li>
       </ul>
@@ -580,14 +624,70 @@
         <section>
           <h2 class="areaTitle">Library</h2>
           <label>Browse and select an image to edit</label>
+          <div class="libraryFilters">
+            <div>
+              <label for="libraryFilterType">Asset type</label>
+              <select id="libraryFilterType">
+                <option value="">All types</option>
+              </select>
+            </div>
+            <div>
+              <label for="libraryFilterProject">Project</label>
+              <select id="libraryFilterProject">
+                <option value="">All projects</option>
+              </select>
+            </div>
+            <div>
+              <label for="libraryImportAssetType">Import as type</label>
+              <select id="libraryImportAssetType"></select>
+            </div>
+            <div id="librarySelectedTypeWrap" style="display: none;">
+              <label for="librarySelectedAssetType">Selected asset type</label>
+              <select id="librarySelectedAssetType"></select>
+            </div>
+          </div>
           <div class="libraryImportRow">
             <button type="button" id="libraryImportBtn">Import…</button>
             <button type="button" id="libraryRenameBtn" class="secondary" disabled title="Rename selected image">Rename…</button>
+            <button type="button" id="librarySetTypeBtn" class="secondary" disabled title="Apply asset type to selected">Set type</button>
             <input type="file" name="libraryImport" id="libraryImportInput" accept="image/png,image/jpeg,image/webp" multiple style="display: none;" />
           </div>
           <div id="libraryGrid" class="libraryGrid libraryGridWide"></div>
-          <p class="helpText">Click a thumbnail to set the active image. Double-click a name or use Rename to change the display filename. Open Edit for adjustments or Create for a new image.</p>
+          <p class="helpText">Click a thumbnail to set the active image. Badges show asset type and project membership. Double-click a name or use Rename to change the display filename.</p>
         </section>
+      </div>
+
+      <div id="areaProjects" class="areaPane projectsPane">
+        <div id="projectsListView">
+          <div class="projectDetailHeader">
+            <div>
+              <h2 class="areaTitle">Projects</h2>
+              <p class="helpText">Group library assets for a game or level. Assets can belong to multiple projects.</p>
+            </div>
+            <div class="projectsToolbar">
+              <input type="text" id="projectNewName" placeholder="New project name…" style="margin-bottom: 0; min-width: 14rem;" />
+              <button type="button" id="projectCreateBtn">Create project</button>
+            </div>
+          </div>
+          <div id="projectGrid" class="projectGrid"></div>
+          <p id="projectsEmptyHint" class="helpText" style="display: none;">No projects yet. Create one above.</p>
+        </div>
+        <div id="projectsDetailView" style="display: none;">
+          <div class="projectDetailHeader">
+            <div>
+              <button type="button" id="projectBackBtn" class="secondary">← All projects</button>
+              <h2 class="areaTitle" id="projectDetailTitle" style="margin-top: 0.5rem;"></h2>
+              <p id="projectDetailNotes" class="helpText"></p>
+            </div>
+            <div class="projectsToolbar">
+              <button type="button" id="projectAddAssetBtn" class="secondary">Add from library…</button>
+              <button type="button" id="projectDeleteBtn" class="secondary">Delete project</button>
+            </div>
+          </div>
+          <div id="projectAssetGroups"></div>
+          <p id="projectAssetsEmpty" class="helpText" style="display: none;">No assets in this project yet.</p>
+        </div>
+        <p id="projectsError" class="error" style="display: none;"></p>
       </div>
 
       <div id="workspaceShell" class="workspaceShell">
@@ -626,6 +726,7 @@
             </div>
 
             <div id="areaEdit" class="workspacePane">
+              <p id="editAssetTypeBanner" class="editAssetTypeBanner" style="display: none;"></p>
               <details class="gameWorkflows">
                 <summary>Game asset workflows (guided steps)</summary>
                 <p class="helpText" style="margin: 0.5rem 0 0;">Click a step to open the right tool. Run each step when ready; the active image updates as you go.</p>
@@ -1104,6 +1205,291 @@
     let editTool = 'adjust';
     let lastResultUrl = null;
     let apiOrigin = null;
+    let assetTypeCatalog = [];
+    let activeAssetTypeId = 'generic_image';
+    let activeProjectId = null;
+    let projectsView = 'list';
+
+    const EDIT_TOOL_CAPABILITIES = {
+      adjust: 'image.adjust',
+      tile: 'image.tile',
+      maps: 'texture.maps',
+      prepare: 'image.prepare',
+      zoom: 'image.zoom',
+      extend: 'image.extend',
+      manipulate: 'image.manipulate',
+    };
+    const WORKFLOW_STEP_CAPS = {
+      tile: ['image.tile'],
+      manipulate: ['image.manipulate'],
+      maps: ['texture.maps'],
+      zoom: ['image.zoom'],
+      extend: ['image.extend'],
+      adjust: ['image.adjust'],
+      prepare: ['image.prepare'],
+    };
+
+    function capabilitiesForAssetType(typeId) {
+      const t = assetTypeCatalog.find(function(x) { return x.id === typeId; });
+      if (t && t.capabilities) return t.capabilities;
+      return ['image.preview', 'image.adjust', 'image.tile', 'image.prepare', 'image.zoom', 'image.extend', 'image.manipulate'];
+    }
+
+    function hasAssetCapability(typeId, cap) {
+      return capabilitiesForAssetType(typeId).indexOf(cap) !== -1;
+    }
+
+    function assetTypeLabel(typeId) {
+      const t = assetTypeCatalog.find(function(x) { return x.id === typeId; });
+      return t ? t.label : (typeId || 'Image');
+    }
+
+    async function loadAssetTypes() {
+      try {
+        const r = await apiFetch('/asset-types');
+        if (!r.ok) return;
+        assetTypeCatalog = await r.json();
+        populateAssetTypeSelects();
+      } catch (e) { /* ignore */ }
+    }
+
+    function populateAssetTypeSelects() {
+      const selects = [
+        document.getElementById('libraryFilterType'),
+        document.getElementById('libraryImportAssetType'),
+        document.getElementById('librarySelectedAssetType'),
+      ];
+      selects.forEach(function(sel) {
+        if (!sel) return;
+        const prev = sel.value;
+        const isFilter = sel.id === 'libraryFilterType';
+        sel.innerHTML = isFilter ? '<option value="">All types</option>' : '';
+        assetTypeCatalog.forEach(function(t) {
+          const opt = document.createElement('option');
+          opt.value = t.id;
+          opt.textContent = t.label;
+          sel.appendChild(opt);
+        });
+        if (prev && sel.querySelector('option[value="' + CSS.escape(prev) + '"]')) {
+          sel.value = prev;
+        } else if (!isFilter && sel.options.length) {
+          sel.value = 'generic_image';
+        }
+      });
+    }
+
+    function applyEditToolGating() {
+      const caps = capabilitiesForAssetType(activeAssetTypeId);
+      document.querySelectorAll('.editToolTab').forEach(function(btn) {
+        const tool = btn.dataset.tool;
+        const required = EDIT_TOOL_CAPABILITIES[tool];
+        const allowed = !required || caps.indexOf(required) !== -1;
+        btn.style.display = allowed ? '' : 'none';
+        if (!allowed && editTool === tool) {
+          const fallback = Object.keys(EDIT_TOOL_CAPABILITIES).find(function(t) {
+            return caps.indexOf(EDIT_TOOL_CAPABILITIES[t]) !== -1;
+          });
+          if (fallback) switchEditTool(fallback);
+        }
+      });
+      document.querySelectorAll('.workflowCard').forEach(function(card) {
+        let anyVisible = false;
+        card.querySelectorAll('.wf-step').forEach(function(btn) {
+          const tool = btn.dataset.tool;
+          if (tool === 'create') {
+            btn.style.display = '';
+            anyVisible = true;
+            return;
+          }
+          const req = WORKFLOW_STEP_CAPS[tool];
+          const ok = !req || req.some(function(c) { return caps.indexOf(c) !== -1; });
+          btn.style.display = ok ? '' : 'none';
+          if (ok) anyVisible = true;
+        });
+        card.style.display = anyVisible ? '' : 'none';
+      });
+      updateEditAssetTypeBanner();
+    }
+
+    function updateEditAssetTypeBanner() {
+      const el = document.getElementById('editAssetTypeBanner');
+      if (!el || mainArea !== 'edit' || !workingImageBlob) {
+        if (el) el.style.display = 'none';
+        return;
+      }
+      el.textContent = 'Editing as ' + assetTypeLabel(activeAssetTypeId) + '. Tools shown match this asset type\'s capabilities.';
+      el.style.display = 'block';
+    }
+
+    async function refreshProjectFilterSelect() {
+      const sel = document.getElementById('libraryFilterProject');
+      if (!sel) return;
+      const prev = sel.value;
+      try {
+        const r = await apiFetch('/projects');
+        if (!r.ok) return;
+        const projects = await r.json();
+        sel.innerHTML = '<option value="">All projects</option>';
+        projects.forEach(function(p) {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.name;
+          sel.appendChild(opt);
+        });
+        if (prev && sel.querySelector('option[value="' + CSS.escape(prev) + '"]')) {
+          sel.value = prev;
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    async function refreshProjectsList() {
+      const grid = document.getElementById('projectGrid');
+      const empty = document.getElementById('projectsEmptyHint');
+      if (!grid) return;
+      try {
+        const r = await apiFetch('/projects');
+        if (!r.ok) return;
+        const projects = await r.json();
+        grid.innerHTML = '';
+        empty.style.display = projects.length ? 'none' : 'block';
+        projects.forEach(function(p) {
+          const card = document.createElement('div');
+          card.className = 'projectCard';
+          card.dataset.id = p.id;
+          const h = document.createElement('h3');
+          h.textContent = p.name;
+          card.appendChild(h);
+          const meta = document.createElement('div');
+          meta.className = 'projectCardMeta';
+          meta.textContent = (p.asset_count || 0) + ' asset(s)';
+          card.appendChild(meta);
+          card.addEventListener('click', function() { showProjectDetail(p.id); });
+          grid.appendChild(card);
+        });
+        refreshProjectFilterSelect();
+      } catch (e) { /* ignore */ }
+    }
+
+    async function showProjectDetail(projectId) {
+      activeProjectId = projectId;
+      localStorage.setItem('activeProjectId', projectId);
+      try {
+        const r = await apiFetch('/projects/' + encodeURIComponent(projectId));
+        if (!r.ok) throw new Error('Project not found');
+        const project = await r.json();
+        document.getElementById('projectsListView').style.display = 'none';
+        document.getElementById('projectsDetailView').style.display = 'block';
+        document.getElementById('projectDetailTitle').textContent = project.name;
+        document.getElementById('projectDetailNotes').textContent = project.notes || '';
+        const groupsEl = document.getElementById('projectAssetGroups');
+        groupsEl.innerHTML = '';
+        const assets = project.assets || [];
+        document.getElementById('projectAssetsEmpty').style.display = assets.length ? 'none' : 'block';
+        const byType = {};
+        assets.forEach(function(a) {
+          const tid = a.asset_type_id || 'generic_image';
+          if (!byType[tid]) byType[tid] = [];
+          byType[tid].push(a);
+        });
+        Object.keys(byType).sort().forEach(function(tid) {
+          const section = document.createElement('div');
+          section.className = 'projectAssetGroup';
+          const h4 = document.createElement('h4');
+          h4.textContent = assetTypeLabel(tid);
+          section.appendChild(h4);
+          const ul = document.createElement('ul');
+          ul.className = 'projectAssetList';
+          byType[tid].forEach(function(a) {
+            const li = document.createElement('li');
+            const label = document.createElement('span');
+            label.textContent = a.filename || a.asset_id.slice(0, 8);
+            li.appendChild(label);
+            const openBtn = document.createElement('button');
+            openBtn.type = 'button';
+            openBtn.className = 'secondary';
+            openBtn.textContent = 'Open';
+            openBtn.addEventListener('click', function() {
+              selectFromLibrary(a.asset_id, { filename: a.filename, asset_type_id: a.asset_type_id });
+              switchArea('edit');
+            });
+            li.appendChild(openBtn);
+            const rmBtn = document.createElement('button');
+            rmBtn.type = 'button';
+            rmBtn.className = 'secondary';
+            rmBtn.textContent = 'Remove';
+            rmBtn.addEventListener('click', async function() {
+              await apiFetch('/projects/' + projectId + '/assets/' + a.asset_id, { method: 'DELETE' });
+              showProjectDetail(projectId);
+              refreshLibraryGrid();
+            });
+            li.appendChild(rmBtn);
+            ul.appendChild(li);
+          });
+          section.appendChild(ul);
+          groupsEl.appendChild(section);
+        });
+        projectsView = 'detail';
+      } catch (err) {
+        showProjectsError(err.message);
+      }
+    }
+
+    function showProjectsList() {
+      activeProjectId = null;
+      localStorage.removeItem('activeProjectId');
+      projectsView = 'list';
+      document.getElementById('projectsListView').style.display = 'block';
+      document.getElementById('projectsDetailView').style.display = 'none';
+      refreshProjectsList();
+    }
+
+    function showProjectsError(msg) {
+      const el = document.getElementById('projectsError');
+      el.textContent = msg || '';
+      el.style.display = msg ? 'block' : 'none';
+    }
+
+    async function createProjectFromUI() {
+      const name = document.getElementById('projectNewName').value.trim();
+      if (!name) {
+        showProjectsError('Enter a project name.');
+        return;
+      }
+      showProjectsError('');
+      try {
+        const r = await apiFetch('/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name }),
+        });
+        if (!r.ok) throw new Error('Could not create project');
+        document.getElementById('projectNewName').value = '';
+        await refreshProjectsList();
+        const data = await r.json();
+        showProjectDetail(data.id);
+      } catch (err) {
+        showProjectsError(err.message);
+      }
+    }
+
+    async function addActiveAssetToProject(projectId) {
+      if (!selectedLibraryId && !workingImageBlob) {
+        showProjectsError('Select a library asset first.');
+        return;
+      }
+      if (!selectedLibraryId) {
+        showProjectsError('Save the image to the library before adding to a project.');
+        return;
+      }
+      const r = await apiFetch('/projects/' + projectId + '/assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ asset_id: selectedLibraryId }),
+      });
+      if (!r.ok) throw new Error('Could not add asset');
+      showProjectDetail(projectId);
+      refreshLibraryGrid();
+    }
 
     async function resolveApiOrigin() {
       const candidates = [window.location.origin];
@@ -2025,6 +2411,9 @@
       workingImageBlob = null;
       selectedLibraryId = null;
       activeImageLabel = '';
+      activeAssetTypeId = 'generic_image';
+      document.getElementById('librarySelectedTypeWrap').style.display = 'none';
+      document.getElementById('librarySetTypeBtn').disabled = true;
       maskBlob = null;
       selectedMaskLibraryId = null;
       document.getElementById('maskStatus').textContent = '';
@@ -2137,7 +2526,12 @@
 
     async function refreshLibraryGrid() {
       try {
-        const r = await apiFetch('/library?type=image,result');
+        let url = '/library?type=image,result';
+        const typeFilter = document.getElementById('libraryFilterType');
+        const projectFilter = document.getElementById('libraryFilterProject');
+        if (typeFilter && typeFilter.value) url += '&asset_type=' + encodeURIComponent(typeFilter.value);
+        if (projectFilter && projectFilter.value) url += '&project=' + encodeURIComponent(projectFilter.value);
+        const r = await apiFetch(url);
         if (!r.ok) return;
         const items = await r.json();
         libraryGrid.innerHTML = '';
@@ -2162,6 +2556,25 @@
             openRenameModal(item.id, item.filename || '');
           });
           div.appendChild(caption);
+          const badges = document.createElement('div');
+          badges.className = 'libraryItemBadges';
+          const typeBadge = document.createElement('span');
+          typeBadge.className = 'assetBadge';
+          typeBadge.textContent = assetTypeLabel(item.asset_type_id || 'generic_image');
+          badges.appendChild(typeBadge);
+          (item.projects || []).slice(0, 2).forEach(function(p) {
+            const pb = document.createElement('span');
+            pb.className = 'projectBadge';
+            pb.textContent = p.name;
+            badges.appendChild(pb);
+          });
+          if ((item.projects || []).length > 2) {
+            const more = document.createElement('span');
+            more.className = 'projectBadge';
+            more.textContent = '+' + (item.projects.length - 2);
+            badges.appendChild(more);
+          }
+          div.appendChild(badges);
           div.addEventListener('click', function() { selectFromLibrary(item.id, item); });
           libraryGrid.appendChild(div);
         });
@@ -2193,6 +2606,15 @@
         workingImageBlob = blob;
         selectedLibraryId = id;
         activeImageLabel = (meta && meta.filename) ? meta.filename : ('Library ' + id.slice(0, 8));
+        activeAssetTypeId = (meta && meta.asset_type_id) ? meta.asset_type_id : 'generic_image';
+        const typeWrap = document.getElementById('librarySelectedTypeWrap');
+        const typeSel = document.getElementById('librarySelectedAssetType');
+        if (typeWrap && typeSel) {
+          typeWrap.style.display = 'block';
+          typeSel.value = activeAssetTypeId;
+        }
+        document.getElementById('librarySetTypeBtn').disabled = false;
+        applyEditToolGating();
         maskBlob = null;
         selectedMaskLibraryId = null;
         document.getElementById('maskStatus').textContent = '';
@@ -2257,11 +2679,15 @@
     let isRequestInProgress = false;
     function updateRunButton() {
       const op = getOperationArea();
-      const runnable = mainArea === 'create' || (mainArea === 'edit' && runnableEditTools.includes(editTool));
-      if (!runnable || isRequestInProgress || mainArea === 'library') {
+      const editCap = EDIT_TOOL_CAPABILITIES[editTool];
+      const editRunnable = mainArea === 'edit' && (
+        !editCap || hasAssetCapability(activeAssetTypeId, editCap)
+      );
+      const runnable = mainArea === 'create' || editRunnable;
+      if (!runnable || isRequestInProgress || mainArea === 'library' || mainArea === 'projects') {
         topBarRunBtn.disabled = true;
         topBarRunBtn.textContent = 'Run';
-        topBarRunBtn.style.display = mainArea === 'library' ? 'none' : 'inline-block';
+        topBarRunBtn.style.display = (mainArea === 'library' || mainArea === 'projects') ? 'none' : 'inline-block';
         return;
       }
       topBarRunBtn.style.display = 'inline-block';
@@ -2371,12 +2797,15 @@
         updateZoomCropOverlay();
       }
       updateManipulateMaskWarn();
+      updateEditAssetTypeBanner();
       updateRunButton();
       updateAreaStatus();
     }
     function updateAreaStatus() {
       if (mainArea === 'library') {
         setStatus(workingImageBlob ? 'Image selected — open Edit to modify.' : 'Select an image from the library.', false);
+      } else if (mainArea === 'projects') {
+        setStatus('Manage project asset collections.', false);
       } else if (mainArea === 'create') {
         setStatus('New image from prompt — no source image required.', false);
       } else if (mainArea === 'edit') {
@@ -2395,12 +2824,22 @@
       document.querySelectorAll('.sidebarItem').forEach(function(b) {
         b.classList.toggle('active', b.dataset.area === area);
       });
-      if (area === 'library') {
+      if (area === 'library' || area === 'projects') {
         workspaceShell.classList.remove('visible');
       } else {
         workspaceShell.classList.add('visible');
         areaCreate.classList.toggle('active', area === 'create');
         areaEdit.classList.toggle('active', area === 'edit');
+      }
+      if (area === 'projects') {
+        if (projectsView === 'detail' && activeProjectId) {
+          showProjectDetail(activeProjectId);
+        } else {
+          showProjectsList();
+        }
+      }
+      if (area === 'edit') {
+        applyEditToolGating();
       }
       topBarDownloadLink.style.display = lastResultUrl ? 'inline-block' : 'none';
       updateRunButton();
@@ -2452,6 +2891,47 @@
       sidebarToggle.setAttribute('aria-label', sidebar.classList.contains('collapsed') ? 'Expand sidebar' : 'Collapse sidebar');
     });
 
+    document.getElementById('libraryFilterType').addEventListener('change', refreshLibraryGrid);
+    document.getElementById('libraryFilterProject').addEventListener('change', refreshLibraryGrid);
+    document.getElementById('librarySetTypeBtn').addEventListener('click', async function() {
+      if (!selectedLibraryId) return;
+      const typeId = document.getElementById('librarySelectedAssetType').value;
+      try {
+        const r = await apiFetch('/library/' + selectedLibraryId, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ asset_type_id: typeId }),
+        });
+        if (!r.ok) throw new Error('Could not update asset type');
+        activeAssetTypeId = typeId;
+        applyEditToolGating();
+        refreshLibraryGrid();
+        setStatus('Asset type set to ' + assetTypeLabel(typeId) + '.', false);
+      } catch (err) {
+        setStatus(err.message, false);
+      }
+    });
+    document.getElementById('projectCreateBtn').addEventListener('click', createProjectFromUI);
+    document.getElementById('projectBackBtn').addEventListener('click', showProjectsList);
+    document.getElementById('projectDeleteBtn').addEventListener('click', async function() {
+      if (!activeProjectId || !confirm('Delete this project? Library assets are kept.')) return;
+      await apiFetch('/projects/' + activeProjectId, { method: 'DELETE' });
+      showProjectsList();
+    });
+    document.getElementById('projectAddAssetBtn').addEventListener('click', async function() {
+      if (!activeProjectId) return;
+      if (!selectedLibraryId) {
+        showProjectsError('Select an asset in Library first, then add it here.');
+        return;
+      }
+      try {
+        await addActiveAssetToProject(activeProjectId);
+        showProjectsError('');
+      } catch (err) {
+        showProjectsError(err.message);
+      }
+    });
+
     libraryImportBtn.addEventListener('click', function() { libraryImportInput.click(); });
     libraryImportInput.addEventListener('change', async function() {
       const files = this.files;
@@ -2462,6 +2942,7 @@
         const formData = new FormData();
         formData.append('image', f, f.name || 'image.png');
         formData.append('type', 'image');
+        formData.append('asset_type_id', document.getElementById('libraryImportAssetType').value || 'generic_image');
         try {
           const r = await apiFetch('/library/import', { method: 'POST', body: formData });
           if (!r.ok) throw new Error('Import failed');
@@ -2907,6 +3388,13 @@
             selectedLibraryId = saved.id;
             localStorage.setItem('activeLibraryId', saved.id);
             if (saved.metadata && saved.metadata.filename) activeImageLabel = saved.metadata.filename;
+            if (saved.metadata && saved.metadata.asset_type_id) {
+              activeAssetTypeId = saved.metadata.asset_type_id;
+            } else if (sourceId) {
+              activeAssetTypeId = activeAssetTypeId || 'generic_image';
+            } else {
+              activeAssetTypeId = 'generic_image';
+            }
             updateActiveImageBar();
           }
         }
@@ -2914,6 +3402,8 @@
       if (wasCreate) {
         switchArea('edit');
         switchEditTool('adjust');
+      } else {
+        applyEditToolGating();
       }
       setStatus('Done — preview updated.', false);
       updateRunButton();
@@ -3103,6 +3593,14 @@
     updateAreaStatus();
     refreshLibraryGrid();
     refreshMaskLibrarySelect();
+    (async function initAppData() {
+      await resolveApiOrigin();
+      await loadAssetTypes();
+      await refreshProjectFilterSelect();
+      await refreshProjectsList();
+      const savedProject = localStorage.getItem('activeProjectId');
+      if (savedProject) activeProjectId = savedProject;
+    })();
     (async function restoreLibrarySelection() {
       await resolveApiOrigin();
       const savedId = localStorage.getItem('activeLibraryId');

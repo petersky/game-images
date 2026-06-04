@@ -102,11 +102,33 @@ game-images serve
 
 Then open http://127.0.0.1:8000 . Use the **gear icon** (top right) to set API keys and run **Discover models** before Create / Zoom / Extend / Manipulate.
 
-**Library → Edit → Create** flow:
+**Library → Projects → Edit → Create** flow:
 
-1. **Library** — browse, import, and click a thumbnail to set the **active image** (shown in the bar below the top toolbar).
-2. **Edit** — local tools (Adjust, Tile, Maps), **Prepare** (shift before extend), or AI tools (**Zoom**, Extend, Manipulate). **Game asset workflows** at the top of Edit lists guided step sequences (tileable texture, environment, sprite, shift-then-fill).
-3. **Create** — text-to-image without an existing source; the result becomes the active image. Open **Edit** to refine it.
+1. **Library** — browse, import, and click a thumbnail to set the **active image**. Filter by **asset type** or **project**; badges show type and project membership.
+2. **Projects** — group library assets for a game or level (many-to-many). Add assets from the library; open them in Edit from the project detail view.
+3. **Edit** — tools shown depend on the asset’s **type** (capabilities). **Game asset workflows** suggest step sequences for textures, environments, and sprites.
+4. **Create** — text-to-image without an existing source; the result becomes the active image.
+
+### Asset types (pluggable)
+
+Built-in types register capabilities used to show or hide Edit tools:
+
+| Type | Extends | Extra capabilities |
+|------|---------|-------------------|
+| Image | — | All standard image edit tools |
+| Texture | Image | Maps, seamless tiling workflows |
+| Skydome | Image | Skydome preview / lightmap hooks (phase 2 UI) |
+| Background | Image | Same as Image today |
+
+Import or assign a type in Library. Results inherit the source asset’s type when saved.
+
+To add a type in code, register an `AssetTypeDefinition` in `game_images/asset_types/builtin.py` (entry points planned for later).
+
+### Projects
+
+- **Projects page**: create projects, view assets grouped by type, add/remove library members.
+- **Library**: filter by project; each thumbnail shows project chips.
+- Deleting a project removes membership only — assets stay in the library.
 
 **Zoom** — zoom out uses uniform outpaint (same idea as Extend on all sides). Zoom in crops using the dashed Preview box; optional **Enhance** runs inpaint on the crop without a mask.
 

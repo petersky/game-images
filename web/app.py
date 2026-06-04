@@ -11,6 +11,7 @@ from PIL import Image
 app = FastAPI(title="Game Images AI")
 
 _library = None
+_projects = None
 
 
 def _get_library():
@@ -19,6 +20,14 @@ def _get_library():
         from game_images.library import Library
         _library = Library()
     return _library
+
+
+def _get_projects():
+    global _projects
+    if _projects is None:
+        from game_images.projects import ProjectStore
+        _projects = ProjectStore()
+    return _projects
 
 
 @app.exception_handler(Exception)
@@ -101,7 +110,7 @@ async def api_shift(
 ) -> Response:
     """Shift the image in the given direction; new area is black. Use before extend to fill the blank."""
     try:
-        _, _, shift_image_fn, _, _, _, _, _ = _core()
+        _, _, shift_image_fn, _, _, _, _, _, _ = _core()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Could not load app: {e!s}")
     direction = (direction or "west").strip().lower()
@@ -136,7 +145,7 @@ async def api_extend(
     provider: str = Form("openai"),
     model: str | None = Form(None),
 ) -> Response:
-    extend_image_fn, _, _, _, _, _, _, _ = _core()
+    extend_image_fn, _, _, _, _, _, _, _, _ = _core()
     directions_list = _parse_directions(direction)
     prompt_text = prompt or "Seamlessly extend the image in the new area."
     try:
@@ -168,7 +177,7 @@ async def api_zoom(
     provider: str = Form("openai"),
     model: str | None = Form(None),
 ) -> Response:
-    _, _, _, _, _, _, _, zoom_image_fn = _core()
+    _, _, _, _, _, _, _, _, zoom_image_fn = _core()
     zoom_mode = (mode or "out").strip().lower()
     if zoom_mode not in ("in", "out"):
         raise HTTPException(status_code=400, detail="mode must be in or out")
@@ -212,7 +221,7 @@ async def api_manipulate(
     provider: str = Form("openai"),
     model: str | None = Form(None),
 ) -> Response:
-    _, manipulate_image_fn, _, _, _, _, _, _ = _core()
+    _, manipulate_image_fn, _, _, _, _, _, _, _ = _core()
     image_bytes = normalize_upload_to_png(await image.read())
     mask_bytes = await mask.read() if mask else None
     if mask_bytes:
@@ -239,7 +248,7 @@ async def api_create(
     provider: str = Form("openai"),
     model: str | None = Form(None),
 ) -> Response:
-    _, _, _, _, create_image_fn, _, _, _ = _core()
+    _, _, _, _, create_image_fn, _, _, _, _ = _core()
     w = max(64, min(2048, width))
     h = max(64, min(2048, height))
     try:
@@ -272,7 +281,7 @@ async def api_adjust(
     resize_height: int = Form(0),
     resize_keep_aspect: bool = Form(True),
 ) -> Response:
-    _, _, _, _, _, adjust_image_fn, _, _ = _core()
+    _, _, _, _, _, adjust_image_fn, _, _, _ = _core()
     try:
         body = normalize_upload_to_png(await image.read())
         scale = max(0.01, min(10.0, resize_scale))
@@ -303,7 +312,7 @@ async def api_tile(
     image: UploadFile = File(...),
     mode: str = Form("offset_x"),
 ) -> Response:
-    _, _, _, _, _, _, tile_image_fn, _ = _core()
+    _, _, _, _, _, _, tile_image_fn, _, _ = _core()
     try:
         body = normalize_upload_to_png(await image.read())
         result = tile_image_fn(body, mode)
@@ -319,7 +328,7 @@ async def api_maps(
     map_type: str = Form("bump"),
     strength: float = Form(1.0),
 ) -> Response:
-    _, _, _, _, _, _, _, generate_texture_map_fn = _core()
+    _, _, _, _, _, _, _, generate_texture_map_fn, _ = _core()
     try:
         body = normalize_upload_to_png(await image.read())
         result = generate_texture_map_fn(body, map_type, strength=strength)
@@ -329,20 +338,108 @@ async def api_maps(
     return Response(content=result, media_type="image/png")
 
 
+@app.get("/asset-types")
+async def asset_types_list() -> list:
+    from game_images.asset_types import get_asset_type_registry
+
+    return get_asset_type_registry().list_public()
+
+
+@app.get("/projects")
+async def projects_list() -> list:
+    return _get_projects().list_projects()
+
+
+class ProjectCreateBody(BaseModel):
+    name: str
+    notes: str | None = None
+
+
+class ProjectUpdateBody(BaseModel):
+    name: str | None = None
+    notes: str | None = None
+
+
+class ProjectAssetBody(BaseModel):
+    asset_id: str
+    role: str | None = None
+    sort_order: int | None = None
+
+
+@app.post("/projects")
+async def projects_create(body: ProjectCreateBody) -> dict:
+    name = (body.name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Project name is required.")
+    return _get_projects().create_project(name, notes=body.notes)
+
+
+@app.get("/projects/{project_id}")
+async def projects_get(project_id: str) -> dict:
+    project = _get_projects().get_project(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+
+@app.patch("/projects/{project_id}")
+async def projects_update(project_id: str, body: ProjectUpdateBody) -> dict:
+    payload = body.model_dump(exclude_unset=True)
+    if not payload:
+        raise HTTPException(status_code=400, detail="No fields to update.")
+    if "name" in payload and not (payload["name"] or "").strip():
+        raise HTTPException(status_code=400, detail="Project name cannot be empty.")
+    project = _get_projects().update_project(project_id, **payload)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+
+@app.delete("/projects/{project_id}")
+async def projects_delete(project_id: str) -> dict:
+    if not _get_projects().delete_project(project_id):
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {"deleted": project_id}
+
+
+@app.post("/projects/{project_id}/assets")
+async def projects_add_asset(project_id: str, body: ProjectAssetBody) -> dict:
+    store = _get_projects()
+    if not store.add_asset(
+        project_id,
+        body.asset_id,
+        role=body.role,
+        sort_order=body.sort_order,
+    ):
+        raise HTTPException(status_code=404, detail="Project or asset not found")
+    project = store.get_project(project_id)
+    return project or {}
+
+
+@app.delete("/projects/{project_id}/assets/{asset_id}")
+async def projects_remove_asset(project_id: str, asset_id: str) -> dict:
+    if not _get_projects().remove_asset(project_id, asset_id):
+        raise HTTPException(status_code=404, detail="Project or asset membership not found")
+    return {"removed": asset_id, "project_id": project_id}
+
+
 @app.get("/library")
 async def library_list(
     type: str | None = Query(None, description="Filter by type: image, mask, result (comma-separated for multiple)"),
     tag: str | None = Query(None),
+    asset_type: str | None = Query(None, description="Filter by asset_type_id (comma-separated)"),
+    project: str | None = Query(None, description="Filter by project id"),
 ) -> list:
     """List images in the library."""
     lib = _get_library()
-    return lib.list_images(type=type, tag=tag)
+    return lib.list_images(type=type, tag=tag, asset_type=asset_type, project_id=project)
 
 
 @app.post("/library/import")
 async def library_import(
     image: UploadFile = File(...),
     type: str = Form("image"),
+    asset_type_id: str = Form("generic_image"),
 ) -> dict:
     """Import an image into the library."""
     if type not in ("image", "mask", "result"):
@@ -353,7 +450,12 @@ async def library_import(
     png_bytes = normalize_upload_to_png(body)
     filename = image.filename or "imported.png"
     lib = _get_library()
-    img_id = lib.add_image(png_bytes, filename, type)
+    img_id = lib.add_image(
+        png_bytes,
+        filename,
+        type,
+        asset_type_id=asset_type_id.strip() or "generic_image",
+    )
     meta = lib.get_metadata(img_id)
     return {"id": img_id, "metadata": meta}
 
@@ -385,6 +487,7 @@ class LibraryUpdateBody(BaseModel):
     prompt: str | None = None
     tags: str | None = None
     notes: str | None = None
+    asset_type_id: str | None = None
 
 
 @app.patch("/library/{img_id}")
@@ -425,6 +528,7 @@ async def library_from_result(
         raise HTTPException(status_code=400, detail="No image data received.")
     png_bytes = normalize_upload_to_png(body)
     lib = _get_library()
+    inherited_type = lib.asset_type_for_source(source_id)
     img_id = lib.add_image(
         png_bytes,
         "result.png",
@@ -432,6 +536,7 @@ async def library_from_result(
         prompt=prompt or None,
         source_id=source_id or None,
         mask_id=mask_id or None,
+        asset_type_id=inherited_type,
     )
     meta = lib.get_metadata(img_id)
     return {"id": img_id, "metadata": meta}
