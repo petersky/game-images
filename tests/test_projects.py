@@ -115,3 +115,42 @@ def test_project_asset_lists_source_id(library: Library, projects: ProjectStore)
     assets = projects.list_project_assets(project["id"])
     by_id = {a["asset_id"]: a for a in assets}
     assert by_id[derived]["source_id"] == src
+
+
+def test_project_settings_round_trip(library: Library, projects: ProjectStore) -> None:
+    project = projects.create_project("Settings")
+    updated = projects.update_project(
+        project["id"],
+        default_asset_type_id="texture",
+        export_preset="texture_set",
+    )
+    assert updated is not None
+    assert updated["settings"]["default_asset_type_id"] == "texture"
+    assert updated["settings"]["export_preset"] == "texture_set"
+
+
+def test_fork_asset_creates_copy(library: Library, projects: ProjectStore) -> None:
+    img_id = library.add_image(_tiny_png(), "hero.png", "image", asset_type_id="texture")
+    project = projects.create_project("Fork test")
+    projects.add_asset(project["id"], img_id, role="albedo")
+    result = projects.fork_asset(project["id"], img_id, role="albedo")
+    assert result is not None
+    assert result["forked_from"] == img_id
+    assert result["id"] != img_id
+    fork_meta = library.get_metadata(result["id"])
+    assert fork_meta is not None
+    assert fork_meta["source_id"] == img_id
+    assert fork_meta["extra"]["forked_from"] == img_id
+    detail = projects.get_project(project["id"])
+    assert detail is not None
+    assert detail["asset_count"] == 2
+
+
+def test_duplicate_image(library: Library) -> None:
+    img_id = library.add_image(_tiny_png(), "base.png", "image", asset_type_id="skydome")
+    new_id = library.duplicate_image(img_id, extra={"forked_from": img_id})
+    assert new_id is not None
+    assert new_id != img_id
+    meta = library.get_metadata(new_id)
+    assert meta is not None
+    assert meta["asset_type_id"] == "skydome"

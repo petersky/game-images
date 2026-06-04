@@ -420,6 +420,13 @@ async def projects_list() -> list:
     return _get_projects().list_projects()
 
 
+@app.get("/projects/export-presets")
+async def projects_export_presets() -> list:
+    from game_images.project_export import list_export_presets
+
+    return list_export_presets()
+
+
 class ProjectCreateBody(BaseModel):
     name: str
     notes: str | None = None
@@ -428,6 +435,14 @@ class ProjectCreateBody(BaseModel):
 class ProjectUpdateBody(BaseModel):
     name: str | None = None
     notes: str | None = None
+    default_asset_type_id: str | None = None
+    export_preset: str | None = None
+
+
+class ProjectForkBody(BaseModel):
+    asset_id: str
+    role: str | None = None
+    filename: str | None = None
 
 
 class ProjectAssetBody(BaseModel):
@@ -510,6 +525,39 @@ async def projects_update_asset(
         raise HTTPException(status_code=404, detail="Project or asset membership not found")
     project = store.get_project(project_id)
     return project or {}
+
+
+@app.post("/projects/{project_id}/fork")
+async def projects_fork_asset(project_id: str, body: ProjectForkBody) -> dict:
+    store = _get_projects()
+    result = store.fork_asset(
+        project_id,
+        body.asset_id,
+        role=body.role,
+        filename=body.filename,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Project or asset not found")
+    return result
+
+
+@app.get("/projects/{project_id}/export")
+async def projects_export(
+    project_id: str,
+    preset: str = Query("png_by_role", description="Export preset id"),
+) -> Response:
+    store = _get_projects()
+    try:
+        data, filename = store.export_project_zip(project_id, preset)
+    except ValueError as e:
+        msg = str(e)
+        status = 404 if "not found" in msg.lower() else 400
+        raise HTTPException(status_code=status, detail=msg)
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.get("/library")

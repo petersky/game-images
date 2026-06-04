@@ -9,7 +9,28 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from game_images.library import Library, get_library_path
+from game_images.library import DEFAULT_ASSET_TYPE_ID, Library, get_library_path
+from game_images.project_export import build_project_export_zip
+
+
+def parse_project_settings(extra: dict | None) -> dict[str, str | None]:
+    data = extra or {}
+    return {
+        "default_asset_type_id": data.get("default_asset_type_id") or DEFAULT_ASSET_TYPE_ID,
+        "export_preset": data.get("export_preset"),
+    }
+
+
+def merge_project_settings(extra: dict | None, **updates: str | None) -> dict:
+    merged = dict(extra or {})
+    for key in ("default_asset_type_id", "export_preset"):
+        if key in updates:
+            value = updates[key]
+            if value is None or value == "":
+                merged.pop(key, None)
+            else:
+                merged[key] = value
+    return merged
 
 
 def _utc_now() -> str:
@@ -55,6 +76,7 @@ class ProjectStore:
             return None
         project = self._project_row(row)
         project["assets"] = self.list_project_assets(project_id)
+        project["settings"] = parse_project_settings(project.get("extra"))
         return project
 
     def create_project(
@@ -86,14 +108,30 @@ class ProjectStore:
         name: str | None = None,
         notes: str | None = None,
         extra: dict | None = None,
+        default_asset_type_id: str | None = None,
+        export_preset: str | None = None,
     ) -> dict[str, Any] | None:
         updates: dict[str, Any] = {"updated_at": _utc_now()}
         if name is not None:
             updates["name"] = name.strip()
         if notes is not None:
             updates["notes"] = notes
-        if extra is not None:
-            updates["extra"] = json.dumps(extra)
+
+        settings_update: dict[str, str | None] = {}
+        if default_asset_type_id is not None:
+            settings_update["default_asset_type_id"] = default_asset_type_id
+        if export_preset is not None:
+            settings_update["export_preset"] = export_preset
+
+        if extra is not None or settings_update:
+            current = self.get_project(project_id)
+            if current is None:
+                return None
+            merged_extra = merge_project_settings(current.get("extra"), **settings_update)
+            if extra is not None:
+                merged_extra = {**merged_extra, **extra}
+            updates["extra"] = json.dumps(merged_extra)
+
         if len(updates) <= 1:
             return self.get_project(project_id)
         set_clause = ", ".join(f"{k} = ?" for k in updates)
@@ -219,6 +257,46 @@ class ProjectStore:
                 (asset_id,),
             ).fetchall()
         return [{"id": row["id"], "name": row["name"]} for row in rows]
+
+    def fork_asset(
+        self,
+        project_id: str,
+        asset_id: str,
+        *,
+        role: str | None = None,
+        filename: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Copy a library asset into a project-local fork for isolated edits."""
+        if self.get_project(project_id) is None:
+            return None
+        meta = self._library.get_metadata(asset_id)
+        if meta is None:
+            return None
+        new_id = self._library.duplicate_image(
+            asset_id,
+            filename=filename,
+            extra={"forked_from": asset_id},
+        )
+        if new_id is None:
+            return None
+        self.add_asset(project_id, new_id, role=role)
+        new_meta = self._library.get_metadata(new_id)
+        return {
+            "id": new_id,
+            "metadata": new_meta,
+            "forked_from": asset_id,
+            "project_id": project_id,
+        }
+
+    def export_project_zip(
+        self,
+        project_id: str,
+        preset_id: str,
+    ) -> tuple[bytes, str]:
+        project = self.get_project(project_id)
+        if project is None:
+            raise ValueError("Project not found")
+        return build_project_export_zip(self._library, project, preset_id)
 
     @staticmethod
     def _project_row(row: sqlite3.Row) -> dict[str, Any]:

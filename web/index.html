@@ -324,6 +324,25 @@
       color: var(--muted);
       margin-left: 0.35rem;
     }
+    .projectSettings {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .projectSettings h3 {
+      font-size: 0.9375rem;
+      margin: 0 0 0.75rem 0;
+    }
+    .projectSettingsRow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: flex-end;
+    }
+    .projectSettingsRow label { margin-bottom: 0.25rem; }
+    .projectSettingsRow > div { min-width: 10rem; }
     .previewMeta {
       margin-top: 0.75rem;
       font-size: 0.8125rem;
@@ -723,9 +742,27 @@
                 <option value="background">Background</option>
               </select>
               <button type="button" id="projectAddAssetBtn" class="secondary">Add from library…</button>
+              <button type="button" id="projectExportBtn" class="secondary">Export pack…</button>
               <button type="button" id="projectDeleteBtn" class="secondary">Delete project</button>
             </div>
           </div>
+          <section id="projectSettingsPanel" class="projectSettings" style="display: none;">
+            <h3>Project settings</h3>
+            <div class="projectSettingsRow">
+              <div>
+                <label for="projectDefaultAssetType">Default asset type</label>
+                <select id="projectDefaultAssetType"></select>
+              </div>
+              <div>
+                <label for="projectExportPreset">Default export preset</label>
+                <select id="projectExportPreset">
+                  <option value="">None</option>
+                </select>
+              </div>
+              <button type="button" id="projectSaveSettingsBtn">Save settings</button>
+            </div>
+            <p class="helpText">Default type applies when importing while this project is active. Export preset is used by Export pack.</p>
+          </section>
           <div id="projectAssetGroups"></div>
           <p id="projectAssetsEmpty" class="helpText" style="display: none;">No assets in this project yet.</p>
         </div>
@@ -1274,6 +1311,8 @@
     let activeProjectId = null;
     let projectsView = 'list';
     let previewMode = 'flat';
+    let exportPresetCatalog = [];
+    let activeProjectSettings = { default_asset_type_id: 'generic_image', export_preset: null };
 
     const PREVIEW_MODE_LABELS = {
       flat: 'Flat',
@@ -1340,6 +1379,7 @@
         document.getElementById('libraryFilterType'),
         document.getElementById('libraryImportAssetType'),
         document.getElementById('librarySelectedAssetType'),
+        document.getElementById('projectDefaultAssetType'),
       ];
       selects.forEach(function(sel) {
         if (!sel) return;
@@ -1572,6 +1612,99 @@
       } catch (e) { /* ignore */ }
     }
 
+    async function loadExportPresets() {
+      try {
+        const r = await apiFetch('/projects/export-presets');
+        if (!r.ok) return;
+        exportPresetCatalog = await r.json();
+        const sel = document.getElementById('projectExportPreset');
+        if (!sel) return;
+        const prev = sel.value;
+        sel.innerHTML = '<option value="">None</option>';
+        exportPresetCatalog.forEach(function(p) {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.label;
+          opt.title = p.description || '';
+          sel.appendChild(opt);
+        });
+        if (prev && sel.querySelector('option[value="' + CSS.escape(prev) + '"]')) {
+          sel.value = prev;
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    function applyProjectSettingsToUI(settings) {
+      activeProjectSettings = settings || { default_asset_type_id: 'generic_image', export_preset: null };
+      const typeSel = document.getElementById('projectDefaultAssetType');
+      const presetSel = document.getElementById('projectExportPreset');
+      if (typeSel) {
+        typeSel.value = activeProjectSettings.default_asset_type_id || 'generic_image';
+      }
+      if (presetSel) {
+        presetSel.value = activeProjectSettings.export_preset || '';
+      }
+      const importSel = document.getElementById('libraryImportAssetType');
+      if (importSel && activeProjectId && activeProjectSettings.default_asset_type_id) {
+        importSel.value = activeProjectSettings.default_asset_type_id;
+      }
+    }
+
+    async function saveProjectSettingsFromUI() {
+      if (!activeProjectId) return;
+      const typeSel = document.getElementById('projectDefaultAssetType');
+      const presetSel = document.getElementById('projectExportPreset');
+      try {
+        const r = await apiFetch('/projects/' + activeProjectId, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            default_asset_type_id: typeSel ? typeSel.value : 'generic_image',
+            export_preset: presetSel ? (presetSel.value || '') : '',
+          }),
+        });
+        if (!r.ok) throw new Error('Could not save project settings');
+        const project = await r.json();
+        applyProjectSettingsToUI(project.settings);
+        showProjectsError('');
+        setStatus('Project settings saved.', false);
+      } catch (err) {
+        showProjectsError(err.message);
+      }
+    }
+
+    async function downloadProjectExport(projectId, presetId) {
+      const preset = presetId || 'png_by_role';
+      const r = await apiFetch('/projects/' + encodeURIComponent(projectId) + '/export?preset=' + encodeURIComponent(preset));
+      if (!r.ok) {
+        const err = await r.json().catch(function() { return {}; });
+        throw new Error((err && err.detail) || 'Export failed');
+      }
+      const blob = await r.blob();
+      const disp = r.headers.get('Content-Disposition') || '';
+      const match = /filename="([^"]+)"/.exec(disp);
+      const filename = match ? match[1] : 'project_export.zip';
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function forkProjectAsset(projectId, assetId, role) {
+      const r = await apiFetch('/projects/' + projectId + '/fork', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ asset_id: assetId, role: role || null }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(function() { return {}; });
+        throw new Error((err && err.detail) || 'Fork failed');
+      }
+      return r.json();
+    }
+
     async function refreshProjectsList() {
       const grid = document.getElementById('projectGrid');
       const empty = document.getElementById('projectsEmptyHint');
@@ -1611,6 +1744,8 @@
         document.getElementById('projectsDetailView').style.display = 'block';
         document.getElementById('projectDetailTitle').textContent = project.name;
         document.getElementById('projectDetailNotes').textContent = project.notes || '';
+        document.getElementById('projectSettingsPanel').style.display = 'block';
+        applyProjectSettingsToUI(project.settings);
         const groupsEl = document.getElementById('projectAssetGroups');
         groupsEl.innerHTML = '';
         const assets = project.assets || [];
@@ -1654,6 +1789,22 @@
               switchArea('edit');
             });
             li.appendChild(openBtn);
+            const forkBtn = document.createElement('button');
+            forkBtn.type = 'button';
+            forkBtn.className = 'secondary';
+            forkBtn.textContent = 'Fork';
+            forkBtn.title = 'Copy into this project for isolated edits';
+            forkBtn.addEventListener('click', async function() {
+              try {
+                await forkProjectAsset(projectId, a.asset_id, a.role);
+                showProjectDetail(projectId);
+                refreshLibraryGrid();
+                setStatus('Asset forked into project.', false);
+              } catch (err) {
+                showProjectsError(err.message);
+              }
+            });
+            li.appendChild(forkBtn);
             const rmBtn = document.createElement('button');
             rmBtn.type = 'button';
             rmBtn.className = 'secondary';
@@ -1679,8 +1830,11 @@
       activeProjectId = null;
       localStorage.removeItem('activeProjectId');
       projectsView = 'list';
+      activeProjectSettings = { default_asset_type_id: 'generic_image', export_preset: null };
       document.getElementById('projectsListView').style.display = 'block';
       document.getElementById('projectsDetailView').style.display = 'none';
+      const settingsPanel = document.getElementById('projectSettingsPanel');
+      if (settingsPanel) settingsPanel.style.display = 'none';
       refreshProjectsList();
     }
 
@@ -3231,6 +3385,20 @@
       }
     });
 
+    document.getElementById('projectSaveSettingsBtn').addEventListener('click', saveProjectSettingsFromUI);
+    document.getElementById('projectExportBtn').addEventListener('click', async function() {
+      if (!activeProjectId) return;
+      const presetSel = document.getElementById('projectExportPreset');
+      const preset = (presetSel && presetSel.value) ? presetSel.value : 'png_by_role';
+      try {
+        await downloadProjectExport(activeProjectId, preset);
+        setStatus('Export downloaded.', false);
+        showProjectsError('');
+      } catch (err) {
+        showProjectsError(err.message);
+      }
+    });
+
     libraryImportBtn.addEventListener('click', function() { libraryImportInput.click(); });
     libraryImportInput.addEventListener('change', async function() {
       const files = this.files;
@@ -3241,7 +3409,12 @@
         const formData = new FormData();
         formData.append('image', f, f.name || 'image.png');
         formData.append('type', 'image');
-        formData.append('asset_type_id', document.getElementById('libraryImportAssetType').value || 'generic_image');
+        formData.append('asset_type_id', (function() {
+          if (activeProjectId && activeProjectSettings.default_asset_type_id) {
+            return activeProjectSettings.default_asset_type_id;
+          }
+          return document.getElementById('libraryImportAssetType').value || 'generic_image';
+        })());
         try {
           const r = await apiFetch('/library/import', { method: 'POST', body: formData });
           if (!r.ok) throw new Error('Import failed');
@@ -3895,10 +4068,20 @@
     (async function initAppData() {
       await resolveApiOrigin();
       await loadAssetTypes();
+      await loadExportPresets();
       await refreshProjectFilterSelect();
       await refreshProjectsList();
       const savedProject = localStorage.getItem('activeProjectId');
-      if (savedProject) activeProjectId = savedProject;
+      if (savedProject) {
+        activeProjectId = savedProject;
+        try {
+          const r = await apiFetch('/projects/' + encodeURIComponent(savedProject));
+          if (r.ok) {
+            const project = await r.json();
+            applyProjectSettingsToUI(project.settings);
+          }
+        } catch (e) { /* ignore */ }
+      }
     })();
     (async function restoreLibrarySelection() {
       await resolveApiOrigin();

@@ -332,3 +332,39 @@ class Library:
         if not meta:
             return DEFAULT_ASSET_TYPE_ID
         return meta.get("asset_type_id") or DEFAULT_ASSET_TYPE_ID
+
+    def duplicate_image(
+        self,
+        img_id: str,
+        *,
+        filename: str | None = None,
+        source_id: str | None = None,
+        extra: dict | None = None,
+    ) -> str | None:
+        """Copy image bytes to a new library entry. Returns new id or None."""
+        meta = self.get_metadata(img_id)
+        if meta is None:
+            return None
+        data = self.get_image(img_id)
+        if not data:
+            return None
+        stem = Path(meta["filename"]).stem if meta.get("filename") else img_id[:8]
+        new_filename = sanitize_filename(filename or f"{stem}_fork.png")
+        merged_extra = dict(meta.get("extra") or {})
+        if extra:
+            merged_extra.update(extra)
+        fork_source = source_id if source_id is not None else img_id
+        return self.add_image(
+            data,
+            new_filename,
+            meta["type"],
+            width=meta.get("width"),
+            height=meta.get("height"),
+            prompt=meta.get("prompt"),
+            source_id=fork_source,
+            mask_id=meta.get("mask_id"),
+            tags=meta.get("tags"),
+            notes=meta.get("notes"),
+            extra=merged_extra or None,
+            asset_type_id=meta.get("asset_type_id"),
+        )

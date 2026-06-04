@@ -143,6 +143,33 @@ To add a type in code, register an `AssetTypeDefinition` in `game_images/asset_t
 - Derivative maps show **← from** parent filename when `source_id` is set.
 - Deleting a project removes membership only — assets stay in the library.
 
+**Project settings** (detail view): default asset type for imports while the project is active, and a default export preset.
+
+**Fork** copies an asset into a new library entry linked to the original (`source_id` / `forked_from`) so edits stay isolated in this project.
+
+**Export pack** downloads a ZIP of project assets using a preset (`png_by_role`, `texture_set`, `skydome_pack`).
+
+### Extensibility (asset type plugins)
+
+Third-party packages can register types via setuptools entry points:
+
+```toml
+[project.entry-points."game_images.asset_types"]
+my_studio_props = "my_package.asset_types:register"
+```
+
+```python
+def register(registry: AssetTypeRegistry) -> None:
+    registry.register(AssetTypeDefinition(
+        id="prop",
+        label="Prop",
+        extends="generic_image",
+        capabilities=frozenset({"prop.preview"}),
+    ))
+```
+
+Built-in types load first; plugins load at startup when the registry is initialized.
+
 **Zoom** — zoom out uses uniform outpaint (same idea as Extend on all sides). Zoom in crops using the dashed Preview box; optional **Enhance** runs inpaint on the crop without a mask.
 
 Results from Create and Edit are saved to the library automatically.
